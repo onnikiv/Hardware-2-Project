@@ -53,24 +53,21 @@ class Display:
     
     def __init__(self):
         oled_screen.fill(0)
-        self.menu_items = [" HR", " HRV", " HISTORY", " KUBIOS"]
+        self.menu_items = ["HR", "HRV", "HISTORY", "KUBIOS"]
         
         for i, item in enumerate(self.menu_items):
-            print(f"Item {i}: {item}") # DEBUG
-            oled_screen.text(item, 0, i*10, 1)
+            oled_screen.text(f"{item}", 10, i*10, 1)
 
         oled_screen.show()
         
         self.current_row = 0
         self.state = self.cursor
         
-        
     def cursor(self):
         if not rot.fifo.has_data():
             return
         movement = rot.fifo.get()
-        print(movement) # DEBUG
-        if movement == -1 and self.current_row < 4: 
+        if movement == -1 and self.current_row < len(self.menu_items) - 1: 
             self.current_row += 1
         elif movement == 1 and self.current_row > 0:
             self.current_row -= 1
@@ -83,12 +80,9 @@ class Display:
         for i in range(len(self.menu_items)):
             list_item = self.menu_items[i]
             pointer = ">" if i == self.current_row else ""
-            oled_screen.text(f"{pointer}{list_item}", 0, i * 10, 1)
-
-    
+            oled_screen.text(f"{pointer} {list_item}", 0, i * 10, 1)
         
         oled_screen.show()
-        
 display = Display()
 
 
