@@ -4,6 +4,12 @@ from ssd1306 import SSD1306_I2C
 import time
 
 
+oled_width = 128
+oled_height = 64
+i2c = I2C(1, scl=Pin(15), sda=Pin(14), freq=400000)
+oled_screen = SSD1306_I2C(oled_width, oled_height, i2c)
+
+
 class Encoder:
     def __init__(self, rot_a, rot_b):
         self.a = Pin(rot_a, mode=Pin.IN, pull=Pin.PULL_UP)
@@ -36,5 +42,6 @@ class Button:
             self.fifo.put(2)
             self.old_time = current_time
 
-
 button = Button(12)
+
+
