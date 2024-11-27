@@ -1,7 +1,10 @@
 from machine import Pin, I2C
 from fifo import Fifo
 from ssd1306 import SSD1306_I2C
+import micropython
 import time
+
+micropython.alloc_emergency_exception_buf(200)
 
 oled_width = 128
 oled_height = 64
