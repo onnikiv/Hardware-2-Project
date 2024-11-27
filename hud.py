@@ -44,6 +44,10 @@ class Button:
         if time.ticks_diff(current_time, old_time) >= delay:
             self.fifo.put(2)
             self.old_time = current_time
+    
+    def clear_fifo(self):
+        while self.fifo.has_data():
+            self.fifo.get()
 
 button = Button(12)
 
@@ -81,25 +85,42 @@ class Display:
         
         oled_screen.show()
 
+class Selection:
+    def __init__(self, row):
+        oled_screen.fill(0)
+        if row == 0:
+            oled_screen.text(f"Hearth rate", 10, 10, 1)
+            oled_screen.text(f"Press button to exit", 10, 30, 1)
+        elif row == 1:
+            oled_screen.text(f"HRV", 10, 10, 1)
+            oled_screen.text(f"Press button to exit", 10, 30, 1)
+        elif row == 2:
+            oled_screen.text(f"History", 10, 10, 1)
+            oled_screen.text(f"Press button to exit", 10, 30, 1)
+        elif row == 3:
+            oled_screen.text(f"Kubios", 10, 10, 1)
+            oled_screen.text(f"Press button to exit", 10, 30, 1)
+        else:
+            print("Error selecting row")
+        oled_screen.show()
+    
 display = Display()
+
 
 #TESTAUS
 while True: 
+    #jos nappia painetaan
+    if button.fifo.has_data():
+        #tyhjää fifon, jotta voidaan löytää uusi napin painallus
+        button.clear_fifo()
+        #rotary encoder pois päältä, jotta ei vaikuta selection valikkoon
+        rot.a.irq(handler=None)
+        Sel = Selection(display.current_row)
+        while True:
+            if button.fifo.has_data():
+                button.clear_fifo()
+                break
+        #rotary encoder takas päälle
+        rot.a.irq(handler=rot.handler, trigger=Pin.IRQ_RISING, hard=True)
     while rot.fifo.has_data():
         display.state()
-    while button.fifo.has_data():
-        oled_screen.fill(0)
-        while display.current_row == 0:
-            oled_screen.text(f"Hearth rate", 10, 10, 1)
-            oled_screen.show()
-        while display.current_row == 1:
-            oled_screen.text(f"HRV", 10, 10, 1)
-            oled_screen.show()
-        while display.current_row == 2:
-            oled_screen.text(f"History", 10, 10, 1)
-            oled_screen.show()
-        while display.current_row == 3:
-            oled_screen.text(f"Kubios", 10, 10, 1)
-            oled_screen.show()
-        print(display.current_row)
-        
