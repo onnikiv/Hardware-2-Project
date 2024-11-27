@@ -35,6 +35,7 @@ class Button:
         self.button = Pin(button, mode=Pin.IN, pull=Pin.PULL_UP)
         self.button.irq(handler=self.button_handler, trigger=Pin.IRQ_FALLING, hard=True)
         self.fifo = Fifo(30, typecode="i")
+        self.old_time = time.ticks_ms()
 
     def button_handler(self, pin):
         delay = 200
@@ -42,7 +43,7 @@ class Button:
         
         if time.ticks_diff(current_time, old_time) >= delay:
             self.fifo.put(2)
-            old_time = current_time
+            self.old_time = current_time
 
 button = Button(12)
 
@@ -86,3 +87,19 @@ display = Display()
 while True: 
     while rot.fifo.has_data():
         display.state()
+    while button.fifo.has_data():
+        oled_screen.fill(0)
+        while display.current_row == 0:
+            oled_screen.text(f"Hearth rate", 10, 10, 1)
+            oled_screen.show()
+        while display.current_row == 1:
+            oled_screen.text(f"HRV", 10, 10, 1)
+            oled_screen.show()
+        while display.current_row == 2:
+            oled_screen.text(f"History", 10, 10, 1)
+            oled_screen.show()
+        while display.current_row == 3:
+            oled_screen.text(f"Kubios", 10, 10, 1)
+            oled_screen.show()
+        print(display.current_row)
+        
