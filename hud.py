@@ -1,9 +1,9 @@
-from machine import Pin, I2C
+from machine import Pin, I2C, ADC
 from fifo import Fifo
 from ssd1306 import SSD1306_I2C
 import micropython
 import time
-
+adc = ADC(26)
 micropython.alloc_emergency_exception_buf(200)
 
 oled_width = 128
@@ -89,8 +89,7 @@ class Selection:
     def __init__(self, row):
         oled_screen.fill(0)
         if row == 0:
-            oled_screen.text(f"Hearth rate", 10, 10, 1)
-            oled_screen.text(f"Press button to exit", 10, 30, 1)
+            Selection.HR(self)
         elif row == 1:
             oled_screen.text(f"HRV", 10, 10, 1)
             oled_screen.text(f"Press button to exit", 10, 30, 1)
@@ -104,6 +103,26 @@ class Selection:
             print("Error selecting row")
         oled_screen.show()
     
+    def HR(self):
+        y=0
+        colour = 1
+        oled_screen.fill(0)
+        while True:
+            if button.fifo.has_data():
+                button.clear_fifo()
+                break
+            adc_value=adc.read_u16()
+            scaled = (adc_value*oled_height // 65535)
+            print(scaled)
+            oled_screen.pixel(int(y), int(oled_height - scaled), colour)
+            oled_screen.show()
+            y += 1
+            if y >= oled_width:
+                y = 0
+                oled_screen.fill(0)
+
+                
+    
 display = Display()
 
 
@@ -113,7 +132,6 @@ while True:
     if button.fifo.has_data():
         #tyhjää fifon, jotta voidaan löytää uusi napin painallus
         button.clear_fifo()
-        #rotary encoder pois päältä, jotta ei vaikuta selection valikkoon
         rot.a.irq(handler=None)
         Sel = Selection(display.current_row)
         while True:
