@@ -9,14 +9,13 @@ adc = ADC(26)
 max_peak = 0
 reading_count = 0
 READING_LIMIT = 100
-
+hearth_rates = []
 previous_peak_time = 0
 current_peak_time = 0
-
+average=0
 while True:
     value = adc.read_u16()
     current_time = utime.ticks_ms()
-    
     if MIN_THRESHOLD < value < MAX_THRESHOLD:
         if value > max_peak:
             max_peak = value
@@ -24,9 +23,16 @@ while True:
             current_peak_time = current_time
             if previous_peak_time != 0:
                 ppi = utime.ticks_diff(current_peak_time, previous_peak_time)
-                if ppi > 100:
-                    print(f"PPI: {ppi} ms	BPM: {int(60/(ppi/1000))}")
-    
+                hr = int(60/(ppi/1000))      
+                
+                if 190 >= hr >= 40:
+                    hearth_rates.append(hr)
+                    if len(hearth_rates) > 5:
+                        hearth_rates.pop(0)
+                        
+                    average = sum(hearth_rates) // len(hearth_rates)
+                    print(f"PPI: {ppi} ms	BPM: {average}")
+
     reading_count += 1
     if reading_count >= READING_LIMIT:
         max_peak = 0
