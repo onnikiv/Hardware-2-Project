@@ -26,6 +26,7 @@ class Encoder:
             self.fifo.put(-1)
         else:
             self.fifo.put(1)
+        
 
 rot = Encoder(10, 11)
 
