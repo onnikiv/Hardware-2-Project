@@ -27,7 +27,7 @@ while True:
                 
                 if 190 >= hr >= 40:
                     hearth_rates.append(hr)
-                    if len(hearth_rates) > 5:
+                    if len(hearth_rates) > 4:
                         hearth_rates.pop(0)
                         
                     average = sum(hearth_rates) // len(hearth_rates)
