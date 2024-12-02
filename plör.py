@@ -36,7 +36,7 @@ def HR():
 MAX_THRESHOLD = 50000
 MIN_THRESHOLD = 20000
 
-        
+fifo = Fifo(500, typecode='i')
 
 def read_sample():
     utime.sleep_ms(10)
@@ -47,38 +47,64 @@ def read_sample():
 
 
 def keep_reading():
-    values = []
-    times = []
-    start_time = utime.ticks_ms()  # ekaa kertaa otetaan aika
-    first_peak_time = next_peak_time = None #Alustetaan tulevat huiput
-    
-    y=0
+    ALL_VALUES = []
+    start_time = utime.ticks_ms()
+    first_peak_time = next_peak_time = None
+    y = 0
     colour = 1
     oled_screen.fill(0)
-    
+    max_value = 0
+    current_peak = 0
+    previous_peak = None
+
     while True:
-        
         sample = read_sample()
-        current_time = utime.ticks_ms() # uusi nykyinen aika katsotaan
+        current_time = utime.ticks_ms()
         
-        
-        if MIN_THRESHOLD < sample < MAX_THRESHOLD: # Jos arvot on siellä 30 tuhannessa niin dibdib
-            time_since_start = utime.ticks_diff(current_time, start_time) #ticks diffil katotaan kuinka paljon aikaa on alusta verratuna kuinka kauan looppi on pyörinyt
-            # DEBUG print(f"Time since start: {time_since_start} ms")
-            
+        if MIN_THRESHOLD < sample < MAX_THRESHOLD:
+            fifo.put(sample)
+            value = fifo.get()
+            ALL_VALUES.append(value)
             scaled_adc_value = (sample * oled_height // 65535)
-            values.append(scaled_adc_value)
-            times.append(current_time)
             
-    # Täs kohtaa piirretään näyttöön skaalatut arvot
+            # Calculate the average value of the last two seconds
+            if len(ALL_VALUES) > 200:
+                avg_value = sum(ALL_VALUES[-200:]) / 200
+            else:
+                avg_value = sum(ALL_VALUES) / len(ALL_VALUES)
+            
+            threshold = avg_value  # Use average to decide the threshold
+            
+            if sample > threshold:
+                if sample > max_value:
+                    max_value = sample
+                    current_peak = len(ALL_VALUES)
+            
+            if sample < threshold and max_value > 0:
+                if previous_peak is not None:
+                    interval = current_peak - previous_peak
+                    #print(f"Interval: {interval} samples")
+                    PPI = interval * 100
+                    BPM = int(60 / (PPI/1000))
+                    print(f"BPM: {BPM}")
+                    
+                    
+                previous_peak = current_peak
+                max_value = 0
+            
             oled_screen.pixel(int(y), int(oled_height - scaled_adc_value), colour)
             oled_screen.show()
             y += 1
             if y >= oled_width:
                 y = 0
-                oled_screen.fill(0) #Päivitetään jos y akselilla ylitetään OLED:in maximi
-            
-            if len(values) >= 50: # Jos listan pituus ylittää 100 niin mennään takasin alkuun
+                oled_screen.fill(0)
+
+keep_reading()
+
+
+
+"""
+if len(values) >= 50: # Jos listan pituus ylittää 100 niin mennään takasin alkuun
                 min_value = min(values)
                 max_value = max(values)
                 max_index = values.index(max_value)
@@ -100,5 +126,4 @@ def keep_reading():
                 times = []
                 threshold = (min_value + max_value) // 2
                 print(f"Threshold: {threshold}")
-
-keep_reading()
+"""
