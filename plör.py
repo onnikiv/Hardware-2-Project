@@ -48,14 +48,12 @@ def read_sample():
 
 def keep_reading():
     ALL_VALUES = []
-    start_time = utime.ticks_ms()
-    first_peak_time = next_peak_time = None
     y = 0
     colour = 1
     oled_screen.fill(0)
     max_value = 0
     current_peak = 0
-    previous_peak = None
+    sample_number = 0
 
     while True:
         sample = read_sample()
@@ -67,31 +65,20 @@ def keep_reading():
             ALL_VALUES.append(value)
             scaled_adc_value = (sample * oled_height // 65535)
             
-            # Calculate the average value of the last two seconds
-            if len(ALL_VALUES) > 200:
-                avg_value = sum(ALL_VALUES[-200:]) / 200
-            else:
-                avg_value = sum(ALL_VALUES) / len(ALL_VALUES)
+            if len(ALL_VALUES) >= 200:
+
+                threshold = (min(ALL_VALUES) + max(ALL_VALUES)) // 2
+                
+                ALL_VALUES = []
+
+                print(threshold)
+                
+            if sample > max_value:
+                max_value = sample
+                current_peak = sample_number
+                print(current_peak)
             
-            threshold = avg_value  # Use average to decide the threshold
-            
-            if sample > threshold:
-                if sample > max_value:
-                    max_value = sample
-                    current_peak = len(ALL_VALUES)
-            
-            if sample < threshold and max_value > 0:
-                if previous_peak is not None:
-                    interval = current_peak - previous_peak
-                    #print(f"Interval: {interval} samples")
-                    PPI = interval * 100
-                    BPM = int(60 / (PPI/1000))
-                    print(f"BPM: {BPM}")
-                    
-                    
-                previous_peak = current_peak
-                max_value = 0
-            
+
             oled_screen.pixel(int(y), int(oled_height - scaled_adc_value), colour)
             oled_screen.show()
             y += 1
