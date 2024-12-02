@@ -13,12 +13,23 @@ hearth_rates = []
 previous_peak_time = 0
 current_peak_time = 0
 average=0
+
+window=[]
+window_size = 5
+
+def filter(value, window):
+    window.append(value)
+    if len(window) > window_size:
+        window.pop(0)
+    return sum(window) // len(window)
+
 while True:
     value = adc.read_u16()
+    filtered_value = filter(value, window)
     current_time = utime.ticks_ms()
-    if MIN_THRESHOLD < value < MAX_THRESHOLD:
-        if value > max_peak:
-            max_peak = value
+    if MIN_THRESHOLD < filtered_value < MAX_THRESHOLD:
+        if filtered_value > max_peak:
+            max_peak = filtered_value
             previous_peak_time = current_peak_time
             current_peak_time = current_time
             if previous_peak_time != 0:
@@ -27,7 +38,7 @@ while True:
                 
                 if 190 >= hr >= 40:
                     hearth_rates.append(hr)
-                    if len(hearth_rates) > 4:
+                    if len(hearth_rates) > 7:
                         hearth_rates.pop(0)
                         
                     average = sum(hearth_rates) // len(hearth_rates)
