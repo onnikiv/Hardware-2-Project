@@ -60,16 +60,16 @@ button = Button(12)
 class isr_adc:
     def __init__(self, adc_pin_nr):
         self.av = ADC(adc_pin_nr)
-        self.samples = Fifo(50)
+        self.samples = Fifo(500)
         self.dbg = Pin(0, Pin.OUT)
 
     def handler(self, tid):
-        adc_value = self.av.read_u16()
-        
         self.samples.put(self.av.read_u16())
         # Debug-pinni
         #self.dbg.toggle()
 ia = isr_adc(26)
+sample_rate = 100 # 10ms välein lisätään arvo fifoon
+tmr = Piotimer(mode=Piotimer.PERIODIC, freq=sample_rate, callback=ia.handler) # TÄÄÄ TÄYTTÄÄ FIFON, PITÄÄ KEKSII MITEN SAIS SEN EI TEKEMÄÄN NIIN.
 
 class Display:
     def __init__(self):
@@ -127,10 +127,6 @@ class Display:
             self.KUBIOS()
     
     def HR(self):
-        sample_rate = 100 # 10ms välein lisätään arvo fifoon
-        
-        tmr = Piotimer(mode=Piotimer.PERIODIC, freq=sample_rate, callback=ia.handler)
-        
         
         MAX_THRESHOLD = 50000
         MIN_THRESHOLD = 20000
@@ -143,8 +139,8 @@ class Display:
         average = 0
 
         oled_screen.fill(0)
-
         while self.in_submenu:
+            
             oled_screen.fill(0)
             if not ia.samples.empty():
                 value = ia.samples.get()
@@ -179,10 +175,9 @@ class Display:
         
         
             if button.fifo.has_data():
-                value = button.fifo.get()
-                if value == 2:
-                    self.in_submenu = False
-                    self.update_display()
+                break
+        
+        self.update_display()
                     
                     
 
@@ -258,3 +253,4 @@ while True:
     
     while button.fifo.has_data():
         display.row_check()
+    
