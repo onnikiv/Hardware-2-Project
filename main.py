@@ -69,7 +69,7 @@ class isr_adc:
         #self.dbg.toggle()
 ia = isr_adc(26)
 sample_rate = 100 # 10ms välein lisätään arvo fifoon
-tmr = Piotimer(mode=Piotimer.PERIODIC, freq=sample_rate, callback=ia.handler) # TÄÄÄ TÄYTTÄÄ FIFON, PITÄÄ KEKSII MITEN SAIS SEN EI TEKEMÄÄN NIIN.
+tmr = Piotimer(mode=Piotimer.PERIODIC, freq=sample_rate, callback=ia.handler) # TÄÄÄ TÄYTTÄÄ FIFON, PITÄÄ KEKSII MITEN SAIS SEN EI TEKEMÄÄN NIIN. kosk se just lisää fifoon 10ms välein arvoja.
 
 class Display:
     def __init__(self):
