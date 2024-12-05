@@ -219,7 +219,7 @@ class Display:
             if x >= oled_width:
                 x=0
                 oled_screen.fill(0)
-            oled_screen.fill_rect(0,0,oled_width,12,0)
+            oled_screen.fill_rect(0,0,oled_width,15,0)
             if min_BPM < bpm < max_BPM:
                 oled_screen.text(f"BPM: {bpm}", 10, 2, 1)
             else:
