@@ -5,9 +5,32 @@ import micropython
 import utime
 import time
 import framebuf
+import framebuf
 
 adc = ADC(26)
 micropython.alloc_emergency_exception_buf(200)
+heart_bitmap = bytearray([
+    0b00011100,
+    0b01111111,
+    0b11111111,
+    0b11111100,
+    0b01111111,
+    0b01111110,
+    0b00011000,
+    0b00000000
+])
+
+
+clear_heart_bitmap = bytearray([
+    0b00011100,
+    0b01100001,
+    0b10000011,
+    0b10000100,
+    0b01000011,
+    0b01100001,
+    0b00011100,
+    0b00000000
+])
 heart_bitmap = bytearray([
     0b00011100,
     0b01111111,
@@ -130,7 +153,10 @@ class Display:
     def HR(self):
         y_prev=oled_height//2
         oled_screen.fill(0)
+        y_prev=oled_height//2
+        oled_screen.fill(0)
         y=0
+        x=0
         x=0
         c_250_samples=[700]
         beat=False
@@ -211,6 +237,13 @@ class Display:
                 break
             
             colour=1
+            scaled=oled_height-1-((v-sample_min)*oled_height//(sample_max-sample_min))
+            scaled=max(0,min(oled_height-1,scaled))
+            oled_screen.line(x, y_prev, x+1, scaled , colour)
+            y_prev = scaled
+            x+=1
+            if x >= oled_width:
+                x=0
             scaled=oled_height-1-((v-sample_min)*oled_height//(sample_max-sample_min))
             scaled=max(0,min(oled_height-1,scaled))
             oled_screen.line(x, y_prev, x+1, scaled , colour)
