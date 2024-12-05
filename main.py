@@ -4,15 +4,37 @@ from ssd1306 import SSD1306_I2C
 import micropython
 import utime
 import time
+import framebuf
 
 adc = ADC(26)
 micropython.alloc_emergency_exception_buf(200)
+heart_bitmap = bytearray([
+    0b00011100,
+    0b01111111,
+    0b11111111,
+    0b11111100,
+    0b01111111,
+    0b01111110,
+    0b00011000,
+    0b00000000
+])
+
+
+clear_heart_bitmap = bytearray([
+    0b00011100,
+    0b01100001,
+    0b10000011,
+    0b10000100,
+    0b01000011,
+    0b01100001,
+    0b00011100,
+    0b00000000
+])
 
 oled_width = 128
 oled_height = 64
 i2c = I2C(1, scl=Pin(15), sda=Pin(14), freq=400000)
 oled_screen = SSD1306_I2C(oled_width, oled_height, i2c)
-
 old_time = 0
 
 # Perus Encoder luokka
@@ -106,7 +128,10 @@ class Display:
             self.KUBIOS()
     
     def HR(self):
+        y_prev=oled_height//2
+        oled_screen.fill(0)
         y=0
+        x=0
         c_250_samples=[700]
         beat=False
         bpm=True
@@ -186,14 +211,25 @@ class Display:
                 break
             
             colour=1
-            scaled=(v*oled_height//65535)//2
-            oled_screen.pixel(int(y), int(oled_height - scaled), colour)
-            oled_screen.show()
-            y+=1
-            if y >= oled_width:
-                y=0
+            scaled=oled_height-1-((v-sample_min)*oled_height//(sample_max-sample_min))
+            scaled=max(0,min(oled_height-1,scaled))
+            oled_screen.line(x, y_prev, x+1, scaled , colour)
+            y_prev = scaled
+            x+=1
+            if x >= oled_width:
+                x=0
                 oled_screen.fill(0)
-                oled_screen.text(f"BPM: {bpm}", 10, 10, 1)
+            oled_screen.fill_rect(0,0,oled_width,12,0)
+            if min_BPM < bpm < max_BPM:
+                oled_screen.text(f"BPM: {bpm}", 10, 2, 1)
+            else:
+                oled_screen.text("Calculating", 10, 2, 1)
+            if beat:
+                heart = framebuf.FrameBuffer(heart_bitmap,8 , 8, framebuf.MONO_VLSB)
+                oled_screen.blit(heart,100,2)
+            else:
+                heart = framebuf.FrameBuffer(clear_heart_bitmap,8 , 8, framebuf.MONO_VLSB)
+                oled_screen.blit(heart,100,2)
             oled_screen.show()
         
         self.update_display()
