@@ -1,13 +1,9 @@
-# Alustus
-
-
 from machine import Pin, I2C, ADC
 from fifo import Fifo
 from ssd1306 import SSD1306_I2C
-from piotimer import Piotimer
 import micropython
+import utime
 import time
-
 
 adc = ADC(26)
 micropython.alloc_emergency_exception_buf(200)
@@ -49,27 +45,10 @@ class Button:
         current_time = time.ticks_ms()
         
         if time.ticks_diff(current_time, self.old_time) >= delay:
-            print("2 laitettu fifoon")
             self.fifo.put(2)
             self.old_time = current_time
 
 button = Button(12)
-
-
-# ADC-arvojen lukemiseen, 
-class isr_adc:
-    def __init__(self, adc_pin_nr):
-        self.av = ADC(adc_pin_nr)
-        self.samples = Fifo(500)
-        self.dbg = Pin(0, Pin.OUT)
-
-    def handler(self, tid):
-        self.samples.put(self.av.read_u16())
-        # Debug-pinni
-        #self.dbg.toggle()
-ia = isr_adc(26)
-sample_rate = 100 # 10ms välein lisätään arvo fifoon
-tmr = Piotimer(mode=Piotimer.PERIODIC, freq=sample_rate, callback=ia.handler) # TÄÄÄ TÄYTTÄÄ FIFON, PITÄÄ KEKSII MITEN SAIS SEN EI TEKEMÄÄN NIIN. kosk se just lisää fifoon 10ms välein arvoja.
 
 class Display:
     def __init__(self):
@@ -127,82 +106,95 @@ class Display:
             self.KUBIOS()
     
     def HR(self):
+        c_250_samples=[700]
+        beat=False
+        bpm=True
+        interval_ms=0
+        beats_detected=0
+        last_bpm=0
+        last_sample_time=0
+        sample_time=0
+        sample_max=50000
+        sample_min=20000
+        max_BPM=200
+        min_BPM=30
+        ppi_average_calculated=False
+        v_count=0
+        last_time=0
+        max_c_250_samples = 250
+        moving_ppi_max=10
+        ppi_average=[]
+        ppi_all=[]
         
-        MAX_THRESHOLD = 50000
-        MIN_THRESHOLD = 20000
-        max_peak = 0
-        reading_count = 0
-        READING_LIMIT = 100
-        hearth_rates = []
-        previous_peak_index = 0
-        current_peak_index = 0
-        average = 0
+        
+        
+        
 
-        oled_screen.fill(0)
-        while self.in_submenu:
-            
+        
+        while True:
             oled_screen.fill(0)
-            if not ia.samples.empty():
-                value = ia.samples.get()
+            new_time=utime.ticks_ms()
+            if (new_time - last_time) > 4:
+                last_time = new_time
+                v = adc.read_u16()
+                if v > sample_max or v < sample_min:
+                    print("no values")
+                else:
+                    c_250_samples.append(v)
+                    v_count+=1
+            
+            c_250_samples = c_250_samples[-max_c_250_samples:]
+            
+            min_value, max_value = min(c_250_samples), max(c_250_samples)
+            
+            MAX_THRESHOLD=(min_value+max_value*3)//4
+            MIN_THRESHOLD=(min_value+max_value) //2
+            
+            if v > MAX_THRESHOLD and beat == False:
+                sample_time = new_time
+                interval_ms = sample_time - last_sample_time
+                if interval_ms > 200:
+                    if ppi_average_calculated:
+                        average = calculate_ppi(ppi_average)
+                        if interval_ms > (average*0.7) and interval_ms <(average*1.30):
+                            ppi_all.append(interval_ms)
+                        beat=True
+                        bpm= calculate_bpm(ppi_average)
+                        if bpm > max_BPM or bpm < min_BPM:
+                            bpm = last_bpm
+                        else:
+                            last_bpm = bpm
+                        
+                    ppi_average.append(interval_ms)
+                    ppi_average = ppi_average[-moving_ppi_max:]
+                    last_sample_time = sample_time
                 
-                if MIN_THRESHOLD < value < MAX_THRESHOLD:
-                    if value > max_peak:
-                        max_peak = value
-                        previous_peak_index = current_peak_index
-                        current_peak_index = reading_count
-                        if previous_peak_index != 0:
-                            ppi = (current_peak_index - previous_peak_index)  * 10
-                            hr = int(60 / (ppi / 1000))
-
-                            if 30 <= hr <= 200:
-                                hearth_rates.append(hr)
-                                if len(hearth_rates) > 5:
-
-                                    average = sum(hearth_rates) // len(hearth_rates)
-                                    print(f"PPI: {ppi} ms\tBPM: {average}")
-                                    hearth_rates.pop(0)
-
-                reading_count += 1
-                if reading_count >= READING_LIMIT:
-                    max_peak = 0
-                    reading_count = 0
-
-                    oled_screen.text(f"BPM: {average}", 25, 10)
-                    oled_screen.text(f"PRESS BUTTON TO", 0, 40)
-                    oled_screen.text(f"STOP", 45, 50)
-                    oled_screen.show()
-        
-        
-        
+                else:
+                    beats_detected+=1
+                    beat=True
+                    if beats_detected > 5:
+                        ppi_average_calculated = True
+                        ppi_average.append(interval_ms)
+                        ppi_average = ppi_average[-moving_ppi_max:]
+                    last_sample_time = sample_time
+            if v < MIN_THRESHOLD and beat == True:
+                beat=False
+            
+            if v_count > 10:
+                print(bpm)
+            
+            if len(ppi_all) > 59:
+                average_ppi=calculate_ppi(ppi_all)
+                average_bpm= calculate_bpm(ppi_all)
+            
             if button.fifo.has_data():
                 break
+            
+            oled_screen.text(f"BPM: {bpm}", 10, 10, 1)
+            oled_screen.show()
         
         self.update_display()
-                    
-                    
-
-    """         VANHA PIIRTO FUNKTIO
-    def HR(self):
-        y=0
-        colour = 1
-        oled_screen.fill(0)
-        while self.in_submenu:
-            if button.fifo.has_data():
-                value = button.fifo.get()
-                if value == 2:
-                    self.in_submenu = False
-                    self.update_display()
-                    
-            adc_value = adc.read_u16()
-            scaled = (adc_value * oled_height // 65535)
-            print(scaled)
-            oled_screen.pixel(int(y), int(oled_height - scaled), colour)
-            oled_screen.show()
-            y += 1
-            if y >= oled_width:
-                y = 0
-                oled_screen.fill(0)
-    """       
+            
 
     def HRV(self):
         oled_screen.fill(0)
@@ -243,6 +235,17 @@ class Display:
                     self.in_submenu = False
                     self.update_display()
 
+def calculate_ppi(ppi_average):
+    if ppi_average:
+        average= sum(ppi_average)/len(ppi_average)
+        return int(average) 
+def calculate_bpm(ppi_average):
+    if ppi_average:
+        average = sum(ppi_average) // len(ppi_average)
+        average = 60000/average
+        return int(average)
+
+
 display = Display()
 
 
@@ -253,4 +256,3 @@ while True:
     
     while button.fifo.has_data():
         display.row_check()
-    
