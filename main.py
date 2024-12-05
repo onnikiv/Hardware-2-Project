@@ -125,12 +125,7 @@ class Display:
         moving_ppi_max=10
         ppi_average=[]
         ppi_all=[]
-        
-        
-        
-        
-
-        
+    
         while True:
             oled_screen.fill(0)
             new_time=utime.ticks_ms()
