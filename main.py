@@ -106,6 +106,7 @@ class Display:
             self.KUBIOS()
     
     def HR(self):
+        y=0
         c_250_samples=[700]
         beat=False
         bpm=True
@@ -125,9 +126,8 @@ class Display:
         moving_ppi_max=10
         ppi_average=[]
         ppi_all=[]
-    
+        oled_screen.fill(0)
         while True:
-            oled_screen.fill(0)
             new_time=utime.ticks_ms()
             if (new_time - last_time) > 4:
                 last_time = new_time
@@ -185,7 +185,15 @@ class Display:
             if button.fifo.has_data():
                 break
             
-            oled_screen.text(f"BPM: {bpm}", 10, 10, 1)
+            colour=1
+            scaled=(v*oled_height//65535)//2
+            oled_screen.pixel(int(y), int(oled_height - scaled), colour)
+            oled_screen.show()
+            y+=1
+            if y >= oled_width:
+                y=0
+                oled_screen.fill(0)
+                oled_screen.text(f"BPM: {bpm}", 10, 10, 1)
             oled_screen.show()
         
         self.update_display()
