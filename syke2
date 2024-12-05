@@ -1,6 +1,5 @@
 from machine import ADC
 import utime
-
 adc = ADC(26)
 
 c_250_samples=[3000]
@@ -22,7 +21,6 @@ max_c_250_samples = 250
 moving_ppi_max=10
 ppi_average=[]
 ppi_all=[]
-
 def calculate_ppi(ppi_average):
     if ppi_average:
         average= sum(ppi_average)/len(ppi_average)
@@ -65,7 +63,6 @@ while True:
                     bpm = last_bpm
                 else:
                     last_bpm = bpm
-                
             ppi_average.append(interval_ms)
             ppi_average = ppi_average[-moving_ppi_max:]
             last_sample_time = sample_time
