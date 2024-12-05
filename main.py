@@ -45,7 +45,6 @@ class Button:
         current_time = time.ticks_ms()
         
         if time.ticks_diff(current_time, self.old_time) >= delay:
-            print("2 laitettu fifoon")
             self.fifo.put(2)
             self.old_time = current_time
 
