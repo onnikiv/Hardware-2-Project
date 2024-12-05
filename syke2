@@ -3,7 +3,7 @@ import utime
 
 adc = ADC(26)
 
-c_250_samples=[700]
+c_250_samples=[3000]
 beat=False
 bpm=True
 interval_ms=0
@@ -84,7 +84,4 @@ while True:
     if v_count > 10:
         print(bpm)
     
-    if len(ppi_all) > 59:
-        average_ppi=calculate_ppi(ppi_all)
-        average_bpm= calculate_bpm(ppi_all)
     
