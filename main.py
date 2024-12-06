@@ -150,9 +150,8 @@ class Display:
         elif self.current_row == 3:
             self.KUBIOS()
     
+    
     def HR(self):
-        y_prev=oled_height//2
-        oled_screen.fill(0)
         y_prev=oled_height//2
         oled_screen.fill(0)
         y=0
@@ -266,13 +265,104 @@ class Display:
             oled_screen.show()
         
         self.update_display()
-            
 
     def HRV(self):
+        c_250_samples=[700]
+        beat=False
+        bpm=True
+        interval_ms=0
+        beats_detected=0
+        last_bpm=0
+        last_sample_time=0
+        sample_time=0
+        sample_max=50000
+        sample_min=20000
+        max_BPM=200
+        min_BPM=30
+        ppi_average_calculated=False
+        v_count=0
+        last_time=0
+        max_c_250_samples = 250
+        moving_ppi_max=10
+        ppi_average=[]
+        ppi_all=[]
         oled_screen.fill(0)
-        oled_screen.text("HRV", 10, 10, 1)
-        oled_screen.show()
-        
+        while True:
+            new_time=utime.ticks_ms()
+            if (new_time - last_time) > 4:
+                last_time = new_time
+                v = adc.read_u16()
+                if v > sample_max or v < sample_min:
+                    print("no values")
+                else:
+                    c_250_samples.append(v)
+                    v_count+=1
+            
+            c_250_samples = c_250_samples[-max_c_250_samples:]
+            
+            min_value, max_value = min(c_250_samples), max(c_250_samples)
+            
+            MAX_THRESHOLD=(min_value+max_value*3)//4
+            MIN_THRESHOLD=(min_value+max_value) //2
+            
+            if v > MAX_THRESHOLD and beat == False:
+                sample_time = new_time
+                interval_ms = sample_time - last_sample_time
+                if interval_ms > 200:
+                    if ppi_average_calculated:
+                        average = calculate_ppi(ppi_average)
+                        if interval_ms > (average*0.7) and interval_ms <(average*1.30):
+                            ppi_all.append(interval_ms)
+                        beat=True
+                        bpm= calculate_bpm(ppi_average)
+                        if bpm > max_BPM or bpm < min_BPM:
+                            bpm = last_bpm
+                        else:
+                            last_bpm = bpm
+                        
+                    ppi_average.append(interval_ms)
+                    ppi_average = ppi_average[-moving_ppi_max:]
+                    last_sample_time = sample_time
+                
+                else:
+                    beats_detected+=1
+                    beat=True
+                    if beats_detected > 5:
+                        ppi_average_calculated = True
+                        ppi_average.append(interval_ms)
+                        ppi_average = ppi_average[-moving_ppi_max:]
+                    last_sample_time = sample_time
+            if v < MIN_THRESHOLD and beat == True:
+                beat=False
+            
+            if v_count > 10:
+                print(bpm)
+            
+            if len(ppi_all) > 59:
+                average_ppi=calculate_ppi(ppi_all)
+                average_bpm= calculate_bpm(ppi_all)
+            
+            if button.fifo.has_data():
+                break
+            if len(ppi_all)< 59:
+                oled_screen.fill(0)
+                oled_screen.text(f"Collecting data: ",0,0,10)
+                oled_screen.text(f"{len(ppi_all)} / 60",0,20,10)
+                oled_screen.show()
+            if len(ppi_all) >=59:
+                oled_screen.fill(0)
+                average_ppi = calculate_ppi(ppi_all)
+                average_bpm = calculate_bpm(ppi_all)
+                average_sdnn = calculate_sdnn(ppi_all, average_ppi)
+                average_rmssd = calculate_rmssd(ppi_all)
+                oled_screen.text(f"PPI {average_ppi}", 0,0,10)
+                oled_screen.text(f"HR {average_bpm}", 0, 10, 10)
+                oled_screen.text(f"SDNN {average_sdnn}", 0,20 ,10)
+                oled_screen.text(f"RMSSD {average_rmssd}", 0, 30, 10)
+                oled_screen.show()
+
+        self.update_display()
+            
         # Röpö while looppi, ootetaan et jos tulee uus inputti nappulalt nii lopetetaan
         while self.in_submenu:
             if button.fifo.has_data():
@@ -317,6 +407,22 @@ def calculate_bpm(ppi_average):
         average = 60000/average
         return int(average)
 
+def calculate_sdnn(average, ppi_average):
+    total = 0
+    for i in average:
+        total += (i-ppi_average)**2
+    sdnn = (total / (len(average)-1))**(1/2)
+    rounded_sdnn = round(sdnn, 0)
+    return int(rounded_sdnn)
+
+def calculate_rmssd(ppi_average):
+    i=0
+    total=0
+    while i < len(ppi_average)-1:
+        total += (ppi_average[i+1]-ppi_average[i])**2
+        i += 1
+    rounded_rmssd = round((total / len(ppi_average)-1)**(1/2),0)
+    return int(rounded_rmssd)
 
 display = Display()
 
