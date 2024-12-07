@@ -221,15 +221,13 @@ class Display:
                     last_sample_time = sample_time
             if v < MIN_THRESHOLD and beat == True:
                 beat=False
-   
-    #----------TÄN PÄTKÄN SALEE SAA POISTAA TÄSTÄ FUNKTIOSTA----#        
+        
             if v_count > 10:
                 print(bpm)
             
             if len(ppi_all) > 59:
                 average_ppi=calculate_ppi(ppi_all)
                 average_bpm= calculate_bpm(ppi_all)
-    #-----------------------------------------------------------#
             
             colour=1
             scaled=oled_height-1-((v-sample_min)*oled_height//(sample_max-sample_min))
