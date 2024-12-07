@@ -358,6 +358,9 @@ class Display:
                 oled_screen.text(f"SDNN: {average_sdnn}", 0,20 ,10)
                 oled_screen.text(f"RMSSD: {average_rmssd}", 0, 30, 10)
                 oled_screen.show()
+                
+                history.add_measurement(average_ppi, average_bpm, average_sdnn, average_rmssd)
+                
                 break
 
             if button.fifo.has_data():
@@ -366,15 +369,51 @@ class Display:
 
 
     def HISTORY(self):
-        oled_screen.fill(0)
-        oled_screen.text("HISTORY", 10, 10, 1)
-        oled_screen.show()
+        history.display_history()
         
     def KUBIOS(self):
         oled_screen.fill(0)
         oled_screen.text("KUBIOS", 10, 10, 1)
         oled_screen.show()
+
+
         
+class MeasurementHistory:
+    def __init__(self):
+        self.measurements = []
+        self.current_index = 0
+
+    def add_measurement(self, ppi, bpm, sdnn, rmssd):
+        self.measurements.append({
+            'ppi': ppi,
+            'bpm': bpm,
+            'sdnn': sdnn,
+            'rmssd': rmssd
+        })
+
+    def display_history(self):
+        oled_screen.fill(0)
+        oled_screen.text("HISTORY", 0, 0, 1)
+        for i, measurement in enumerate(reversed(self.measurements[-5:])):  # 5, mittausta, uusin on nro:lla 1.
+            pointer = ">" if i == self.current_index else " "
+            oled_screen.text(f"{pointer} Measurement {i+1}", 0, (i*10)+10, 1)
+        oled_screen.show()
+
+    def display_measurement_details(self):
+        if self.measurements:
+            measurement = self.measurements[-(self.current_index + 1)]
+            oled_screen.fill(0)
+            oled_screen.text(f"Measurement {self.current_index + 1}", 0, 0, 1)
+            oled_screen.text(f"PPI: {measurement['ppi']}", 0, 10, 1)
+            oled_screen.text(f"HR: {measurement['bpm']}", 0, 20, 1)
+            oled_screen.text(f"SDNN: {measurement['sdnn']}", 0, 30, 1)
+            oled_screen.text(f"RMSSD: {measurement['rmssd']}", 0, 40, 1)
+            oled_screen.show()
+
+# History olio
+history = MeasurementHistory()
+
+
 
 def calculate_ppi(ppi_average):
     if ppi_average:
@@ -406,6 +445,8 @@ def calculate_rmssd(ppi_average):
 display = Display()
 
 
+
+
 while True: 
     
     while rot.fifo.has_data():
@@ -413,3 +454,4 @@ while True:
     
     while button.fifo.has_data():
         display.row_check()
+        
