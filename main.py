@@ -232,9 +232,6 @@ class Display:
                 average_ppi=calculate_ppi(ppi_all)
                 average_bpm= calculate_bpm(ppi_all)
             
-            if button.fifo.has_data():
-                break
-            
             colour=1
             scaled=oled_height-1-((v-sample_min)*oled_height//(sample_max-sample_min))
             scaled=max(0,min(oled_height-1,scaled))
@@ -264,6 +261,8 @@ class Display:
                 oled_screen.blit(heart,100,2)
             oled_screen.show()
         
+            if button.fifo.has_data():
+                    break
         self.update_display()
 
     def HRV(self):
@@ -361,41 +360,21 @@ class Display:
                 oled_screen.text(f"RMSSD {average_rmssd}", 0, 30, 10)
                 oled_screen.show()
 
-        self.update_display()
-            
-        # Röpö while looppi, ootetaan et jos tulee uus inputti nappulalt nii lopetetaan
-        while self.in_submenu:
             if button.fifo.has_data():
-                value = button.fifo.get()
-                if value == 2:
-                    self.in_submenu = False
-                    self.update_display()
+                    break
+        self.update_display()
 
     def HISTORY(self):
         oled_screen.fill(0)
         oled_screen.text("HISTORY", 10, 10, 1)
         oled_screen.show()
         
-        # Röpö while looppi, ootetaan et jos tulee uus inputti nappulalt nii lopetetaan
-        while self.in_submenu:
-            if button.fifo.has_data():
-                value = button.fifo.get()
-                if value == 2:
-                    self.in_submenu = False
-                    self.update_display()
 
     def KUBIOS(self):
         oled_screen.fill(0)
         oled_screen.text("KUBIOS", 10, 10, 1)
         oled_screen.show()
         
-        # Röpö while looppi, ootetaan et jos tulee uus inputti nappulalt nii lopetetaan
-        while self.in_submenu:
-            if button.fifo.has_data():
-                value = button.fifo.get()
-                if value == 2:
-                    self.in_submenu = False
-                    self.update_display()
 
 def calculate_ppi(ppi_average):
     if ppi_average:
