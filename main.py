@@ -341,8 +341,6 @@ class Display:
                 average_ppi=calculate_ppi(ppi_all)
                 average_bpm= calculate_bpm(ppi_all)
             
-            if button.fifo.has_data():
-                break
             if len(ppi_all)< 59:
                 oled_screen.fill(0)
                 oled_screen.text(f"Collecting data: ",0,0,10)
