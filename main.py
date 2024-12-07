@@ -2,12 +2,9 @@ from machine import Pin, I2C, ADC
 from fifo import Fifo
 from ssd1306 import SSD1306_I2C
 import micropython
+import framebuf
 import utime
 import time
-import framebuf
-import framebuf
-
-adc = ADC(26)
 micropython.alloc_emergency_exception_buf(200)
 heart_bitmap = bytearray([
     0b00011100,
@@ -19,7 +16,6 @@ heart_bitmap = bytearray([
     0b00011000,
     0b00000000
 ])
-
 
 clear_heart_bitmap = bytearray([
     0b00011100,
@@ -41,7 +37,6 @@ heart_bitmap = bytearray([
     0b00011000,
     0b00000000
 ])
-
 
 clear_heart_bitmap = bytearray([
     0b00011100,
@@ -59,6 +54,8 @@ oled_height = 64
 i2c = I2C(1, scl=Pin(15), sda=Pin(14), freq=400000)
 oled_screen = SSD1306_I2C(oled_width, oled_height, i2c)
 old_time = 0
+
+adc = ADC(26)
 
 # Perus Encoder luokka
 class Encoder:
@@ -224,13 +221,15 @@ class Display:
                     last_sample_time = sample_time
             if v < MIN_THRESHOLD and beat == True:
                 beat=False
-            
+   
+    #----------TÄN PÄTKÄN SALEE SAA POISTAA TÄSTÄ FUNKTIOSTA----#        
             if v_count > 10:
                 print(bpm)
             
             if len(ppi_all) > 59:
                 average_ppi=calculate_ppi(ppi_all)
                 average_bpm= calculate_bpm(ppi_all)
+    #-----------------------------------------------------------#
             
             colour=1
             scaled=oled_height-1-((v-sample_min)*oled_height//(sample_max-sample_min))
@@ -331,21 +330,23 @@ class Display:
                         ppi_average.append(interval_ms)
                         ppi_average = ppi_average[-moving_ppi_max:]
                     last_sample_time = sample_time
+                    
             if v < MIN_THRESHOLD and beat == True:
                 beat=False
             
             if v_count > 10:
                 print(bpm)
-            
+                
             if len(ppi_all) > 59:
                 average_ppi=calculate_ppi(ppi_all)
-                average_bpm= calculate_bpm(ppi_all)
-            
+                average_bpm= calculate_bpm(ppi_all)     
+                     
             if len(ppi_all)< 59:
                 oled_screen.fill(0)
                 oled_screen.text(f"Collecting data: ",0,0,10)
                 oled_screen.text(f"{len(ppi_all)} / 60",0,20,10)
                 oled_screen.show()
+                
             if len(ppi_all) >=59:
                 oled_screen.fill(0)
                 average_ppi = calculate_ppi(ppi_all)
@@ -367,7 +368,6 @@ class Display:
         oled_screen.text("HISTORY", 10, 10, 1)
         oled_screen.show()
         
-
     def KUBIOS(self):
         oled_screen.fill(0)
         oled_screen.text("KUBIOS", 10, 10, 1)
