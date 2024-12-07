@@ -353,15 +353,17 @@ class Display:
                 average_bpm = calculate_bpm(ppi_all)
                 average_sdnn = calculate_sdnn(ppi_all, average_ppi)
                 average_rmssd = calculate_rmssd(ppi_all)
-                oled_screen.text(f"PPI {average_ppi}", 0,0,10)
-                oled_screen.text(f"HR {average_bpm}", 0, 10, 10)
-                oled_screen.text(f"SDNN {average_sdnn}", 0,20 ,10)
-                oled_screen.text(f"RMSSD {average_rmssd}", 0, 30, 10)
+                oled_screen.text(f"PPI: {average_ppi}", 0,0,10)
+                oled_screen.text(f"HR: {average_bpm}", 0, 10, 10)
+                oled_screen.text(f"SDNN: {average_sdnn}", 0,20 ,10)
+                oled_screen.text(f"RMSSD: {average_rmssd}", 0, 30, 10)
                 oled_screen.show()
+                break
 
             if button.fifo.has_data():
-                    break
-        self.update_display()
+                break
+            
+
 
     def HISTORY(self):
         oled_screen.fill(0)
