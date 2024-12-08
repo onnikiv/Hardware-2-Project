@@ -105,14 +105,13 @@ class Display:
         self.state = self.cursor
         
     def cursor(self):
-        if not rot.fifo.has_data():
-            return
-        movement = rot.fifo.get()
-        if movement == -1 and self.current_row < len(self.menu_items) - 1: 
-            self.current_row += 1
-        elif movement == 1 and self.current_row > 0:
-            self.current_row -= 1
-        
+        while rot.fifo.has_data():
+            movement = rot.fifo.get()
+            if movement == -1 and self.current_row < len(self.menu_items) - 1:
+                self.current_row += 1
+            elif movement == 1 and self.current_row > 0:
+                self.current_row -= 1
+
         self.update_display()
     
     def update_display(self):
