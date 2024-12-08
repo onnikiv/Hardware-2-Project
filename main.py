@@ -9,8 +9,8 @@ import network
 from time import sleep
 from umqtt.simple import MQTTClient
 import ujson
-"""
-#----------------------TÄS YRITETÄÄN YHDISTÄÄ-----------------------------------------------------------
+
+"""#----------------------TÄS YRITETÄÄN YHDISTÄÄ-----------------------------------------------------------
 SSID = "KME759_Group_2"
 PASSWORD = "Ryhma2Koulu."
 BROKER_IP = "192.168.2.253"
@@ -131,46 +131,49 @@ class Display:
         oled_screen.fill(0)
         self.menu_items = ["HR", "HRV", "HISTORY", "KUBIOS"]
         for i, item in enumerate(self.menu_items):
-            oled_screen.text(f"{item}", 10, i*10, 1)
+            oled_screen.text(f"{item}", 10, i * 10, 1)
         oled_screen.show()
-        
-        self.in_submenu = False
+
+        self.in_submenu = False  # True, kun ollaan alavalikossa
         self.current_row = 0
         self.state = self.cursor
-        
-    def cursor(self):
-        while rot.fifo.has_data():
-            movement = rot.fifo.get()
-            if movement == -1 and self.current_row < len(self.menu_items) - 1:
-                self.current_row += 1
-            elif movement == 1 and self.current_row > 0:
-                self.current_row -= 1
 
-        self.update_display()
-    
+    def cursor(self):
+        # Tarkistetaan rotary encoder vain, jos ei olla alavalikossa
+        if not self.in_submenu:
+            while rot.fifo.has_data():
+                movement = rot.fifo.get()
+                if movement == -1 and self.current_row < len(self.menu_items) - 1:
+                    self.current_row += 1
+                elif movement == 1 and self.current_row > 0:
+                    self.current_row -= 1
+
+            self.update_display()
+
     def update_display(self):
         oled_screen.fill(0)
-        
         for i in range(len(self.menu_items)):
             list_item = self.menu_items[i]
             pointer = ">" if i == self.current_row else ""
             oled_screen.text(f"{pointer} {list_item}", 0, i * 10, 1)
-        
         oled_screen.show()
-        
 
     def row_check(self):
+        # Tarkista nappulan tila
         if button.fifo.has_data():
             value = button.fifo.get()
             if self.in_submenu:
+                # Paluu päävalikkoon
                 self.in_submenu = False
                 self.update_display()
             else:
+                # Siirrytään alavalikkoon, jos nappia painetaan
                 if value == 2:
                     self.in_submenu = True
                     self.enter_submenu()
-    
+
     def enter_submenu(self):
+        # Aloita valittu alavalikko
         if self.current_row == 0:
             self.HR()
         elif self.current_row == 1:
@@ -409,50 +412,47 @@ class Display:
 
 
     def HISTORY(self):
-        history.display_history()
+        oled_screen.fill(0)
+        test_measurements = ["Measurement 1", "Measurement 2", "Measurement 3", "Measurement 4", "Measurement 5"]
+        current_test = 0
+
+        while True:
+            # Näytetään testi, johon ollaan siirtymässä
+            oled_screen.fill(0)
+            for i, test in enumerate(test_measurements):
+                pointer = ">" if i == current_test else ""
+                oled_screen.text(f"{pointer} {test}", 0, i * 10, 1)
+            oled_screen.show()
+
+            # Tarkistetaan nappi ja rotaatio vain HISTORY-valikossa
+            if rot.fifo.has_data():
+                movement = rot.fifo.get()
+                if movement == -1 and current_test < len(test_measurements) - 1:
+                    current_test += 1
+                elif movement == 1 and current_test > 0:
+                    current_test -= 1
+
+            if button.fifo.has_data():
+                # Siirrytään valitun testin sisälle nappia painamalla
+                value = button.fifo.get()
+                if value == 2:
+                    self.show_test_detail(current_test)
+                break
+
+    def show_test_detail(self, test_index):
+        oled_screen.fill(0)
+        oled_screen.text(f"Test {test_index + 1}", 10, 10, 1)
+        oled_screen.text("Details...", 10, 20, 1)
+        oled_screen.show()
+        while True:
+            if button.fifo.has_data():
+                # Palataan takaisin testilistaan nappia painamalla
+                break
         
     def KUBIOS(self):
         oled_screen.fill(0)
         oled_screen.text("KUBIOS", 10, 10, 1)
         oled_screen.show()
-
-
-        
-class MeasurementHistory:
-    def __init__(self):
-        self.measurements = []
-        self.current_index = 0
-
-    def add_measurement(self, ppi, bpm, sdnn, rmssd):
-        self.measurements.append({
-            'ppi': ppi,
-            'bpm': bpm,
-            'sdnn': sdnn,
-            'rmssd': rmssd
-        })
-
-    def display_history(self):
-        oled_screen.fill(0)
-        oled_screen.text("HISTORY", 0, 0, 1)
-        for i, measurement in enumerate(reversed(self.measurements[-5:])):  # 5, mittausta, uusin on nro:lla 1.
-            pointer = ">" if i == self.current_index else " "
-            oled_screen.text(f"{pointer} Measurement {i+1}", 0, (i*10)+10, 1)
-        oled_screen.show()
-
-    def display_measurement_details(self):
-        if self.measurements:
-            measurement = self.measurements[-(self.current_index + 1)]
-            oled_screen.fill(0)
-            oled_screen.text(f"Measurement {self.current_index + 1}", 0, 0, 1)
-            oled_screen.text(f"PPI: {measurement['ppi']}", 0, 10, 1)
-            oled_screen.text(f"HR: {measurement['bpm']}", 0, 20, 1)
-            oled_screen.text(f"SDNN: {measurement['sdnn']}", 0, 30, 1)
-            oled_screen.text(f"RMSSD: {measurement['rmssd']}", 0, 40, 1)
-            oled_screen.show()
-
-# History olio
-history = MeasurementHistory()
-
 
 
 def calculate_ppi(ppi_average):
@@ -487,11 +487,10 @@ display = Display()
 
 
 
-while True: 
-    
-    while rot.fifo.has_data():
-        display.state()
-    
+while True:
+    if not display.in_submenu:
+        while rot.fifo.has_data():
+            display.state()
+
     while button.fifo.has_data():
         display.row_check()
-        
