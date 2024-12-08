@@ -10,6 +10,12 @@ from time import sleep
 from umqtt.simple import MQTTClient
 import ujson
 
+SSID = "KME759_Group_2"
+PASSWORD = "Ryhma2Koulu."
+BROKER_IP = "192.168.2.253"
+port =21883
+
+
 micropython.alloc_emergency_exception_buf(200)
 heart_bitmap = bytearray([
     0b00011100,
@@ -368,6 +374,9 @@ class Display:
                     "rmssd": average_rmssd, 
                     "sdnn": average_sdnn 
                     } 
+                
+                msg = ujson.dumps(measurement)
+                #mqtt_client.publish(topic, msg)
                 
                 break
 
