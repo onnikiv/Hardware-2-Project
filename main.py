@@ -10,11 +10,34 @@ from time import sleep
 from umqtt.simple import MQTTClient
 import ujson
 
+#----------------------TÄS YRITETÄÄN YHDISTÄÄ-----------------------------------------------------------
 SSID = "KME759_Group_2"
 PASSWORD = "Ryhma2Koulu."
 BROKER_IP = "192.168.2.253"
 port =21883
 
+def connect_wlan():
+    # Connecting to the group WLAN
+    wlan = network.WLAN(network.STA_IF)
+    wlan.active(True)
+    wlan.connect(SSID, PASSWORD)
+    # Attempt to connect once per second
+    while wlan.isconnected() == False:
+        print("Connecting... ")
+        sleep(1)
+
+    # Print the IP address of the Pico
+    print("Connection successful. Pico IP:", wlan.ifconfig()[0])
+    
+def connect_mqtt():
+    mqtt_client=MQTTClient("", BROKER_IP, port)
+    mqtt_client.connect(clean_session=True)
+    return mqtt_client
+
+# 
+connect_wlan()
+mqtt_client = connect_mqtt()
+#---------------------------------------------------------------------------------------------------------
 
 micropython.alloc_emergency_exception_buf(200)
 heart_bitmap = bytearray([
@@ -368,15 +391,15 @@ class Display:
                 oled_screen.show()
                 
                 #mosquitto_sub -h localhost -t "#"
+                topic = "hrv"
                 measurement = { 
                     "mean_hr": average_bpm, 
                     "mean_ppi": average_ppi, 
                     "rmssd": average_rmssd, 
                     "sdnn": average_sdnn 
                     } 
-                
                 msg = ujson.dumps(measurement)
-                #mqtt_client.publish(topic, msg)
+                mqtt_client.publish(topic, msg)
                 
                 break
 
