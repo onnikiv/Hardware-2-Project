@@ -9,7 +9,7 @@ import network
 from time import sleep
 from umqtt.simple import MQTTClient
 import ujson
-
+"""
 #----------------------TÄS YRITETÄÄN YHDISTÄÄ-----------------------------------------------------------
 SSID = "KME759_Group_2"
 PASSWORD = "Ryhma2Koulu."
@@ -38,7 +38,7 @@ def connect_mqtt():
 connect_wlan()
 mqtt_client = connect_mqtt()
 #---------------------------------------------------------------------------------------------------------
-
+"""
 micropython.alloc_emergency_exception_buf(200)
 heart_bitmap = bytearray([
     0b00011100,
