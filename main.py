@@ -355,13 +355,19 @@ class Display:
                 average_bpm = calculate_bpm(ppi_all)
                 average_sdnn = calculate_sdnn(ppi_all, average_ppi)
                 average_rmssd = calculate_rmssd(ppi_all)
-                oled_screen.text(f"PPI: {average_ppi}", 0,0,10)
                 oled_screen.text(f"HR: {average_bpm}", 0, 10, 10)
+                oled_screen.text(f"PPI: {average_ppi}", 0,0,10)
                 oled_screen.text(f"SDNN: {average_sdnn}", 0,20 ,10)
                 oled_screen.text(f"RMSSD: {average_rmssd}", 0, 30, 10)
                 oled_screen.show()
                 
-                history.add_measurement(average_ppi, average_bpm, average_sdnn, average_rmssd)
+                #mosquitto_sub -h localhost -t "#"
+                measurement = { 
+                    "mean_hr": average_bpm, 
+                    "mean_ppi": average_ppi, 
+                    "rmssd": average_rmssd, 
+                    "sdnn": average_sdnn 
+                    } 
                 
                 break
 
