@@ -5,6 +5,11 @@ import micropython
 import framebuf
 import utime
 import time
+import network
+from time import sleep
+from umqtt.simple import MQTTClient
+import ujson
+
 micropython.alloc_emergency_exception_buf(200)
 heart_bitmap = bytearray([
     0b00011100,
