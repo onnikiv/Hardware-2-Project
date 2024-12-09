@@ -450,9 +450,145 @@ class Display:
                 break
         
     def KUBIOS(self):
+        c_250_samples=[700]
+        beat=False
+        bpm=True
+        interval_ms=0
+        beats_detected=0
+        last_bpm=0
+        last_sample_time=0
+        sample_time=0
+        sample_max=50000
+        sample_min=20000
+        max_BPM=200
+        min_BPM=30
+        ppi_average_calculated=False
+        v_count=0
+        last_time=0
+        max_c_250_samples = 250
+        moving_ppi_max=10
+        ppi_average=[]
+        ppi_all=[]
         oled_screen.fill(0)
-        oled_screen.text("KUBIOS", 10, 10, 1)
+        while True:
+            new_time=utime.ticks_ms()
+            if (new_time - last_time) > 4:
+                last_time = new_time
+                v = adc.read_u16()
+                if v > sample_max or v < sample_min:
+                    print("no values")
+                else:
+                    c_250_samples.append(v)
+                    v_count+=1
+            
+            c_250_samples = c_250_samples[-max_c_250_samples:]
+            
+            min_value, max_value = min(c_250_samples), max(c_250_samples)
+            
+            MAX_THRESHOLD=(min_value+max_value*3)//4
+            MIN_THRESHOLD=(min_value+max_value) //2
+            
+            if v > MAX_THRESHOLD and beat == False:
+                sample_time = new_time
+                interval_ms = sample_time - last_sample_time
+                if interval_ms > 200:
+                    if ppi_average_calculated:
+                        average = calculate_ppi(ppi_average)
+                        if interval_ms > (average*0.7) and interval_ms <(average*1.30):
+                            ppi_all.append(interval_ms)
+                        beat=True
+                        bpm= calculate_bpm(ppi_average)
+                        if bpm > max_BPM or bpm < min_BPM:
+                            bpm = last_bpm
+                        else:
+                            last_bpm = bpm
+                        
+                    ppi_average.append(interval_ms)
+                    ppi_average = ppi_average[-moving_ppi_max:]
+                    last_sample_time = sample_time
+                
+                else:
+                    beats_detected+=1
+                    beat=True
+                    if beats_detected > 5:
+                        ppi_average_calculated = True
+                        ppi_average.append(interval_ms)
+                        ppi_average = ppi_average[-moving_ppi_max:]
+                    last_sample_time = sample_time
+                    
+            if v < MIN_THRESHOLD and beat == True:
+                beat=False
+            
+            if v_count > 10:
+                print(bpm)
+                
+            if len(ppi_all) > 59:
+                average_ppi=calculate_ppi(ppi_all)
+                average_bpm= calculate_bpm(ppi_all)     
+                     
+            if len(ppi_all)< 59:
+                oled_screen.fill(0)
+                oled_screen.text(f"Collecting data: ",0,0,10)
+                oled_screen.text(f"{len(ppi_all)} / 60",0,20,10)
+                oled_screen.show()
+                
+            if len(ppi_all) >=59:
+                oled_screen.fill(0)
+                # Function to connect to WLAN
+                connect_wlan()
+                mqtt_client=connect_mqtt()
+                mqtt_client.set_callback(message_callback)
+                mqtt_client.subscribe("hr-data") 
+                mqtt_client.subscribe("kubios-response")
+                print(ppi_all)
+                while True:
+                    # Sending a message every 5 seconds.
+                    topic = "kubios-request"
+                    message = {
+                        "id": 123,
+                        "type":"RRI",
+                        "data": ppi_all,
+                        "analysis": {"type": "readiness" }
+                            }
+                    msg = ujson.dumps(message)
+                    mqtt_client.publish(topic, msg)
+                    sleep(5)
+                    mqtt_client.check_msg()
+                    time.sleep(5)
+
+SSID = "KME759_Group_2"
+PASSWORD = "Ryhma2Koulu."
+BROKER_IP = "192.168.2.253"             
+port =21883
+def connect_wlan():
+    # Connecting to the group WLAN
+    wlan = network.WLAN(network.STA_IF)
+    wlan.active(True)
+    wlan.connect(SSID, PASSWORD)
+    # Attempt to connect once per second
+    while wlan.isconnected() == False:
+        print("Connecting... ")
+        sleep(1)
+
+    # Print the IP address of the Pico
+    print("Connection successful. Pico IP:", wlan.ifconfig()[0])
+
+    
+def connect_mqtt():
+    mqtt_client=MQTTClient("", BROKER_IP, port)
+    mqtt_client.connect(clean_session=True)
+    return mqtt_client
+
+def message_callback(topic, msg):
+    try:
+        message = ujson.loads(msg)
+        print(message)
+        print(f"Stress index: {message["data"]["analysis"]["stress_index"]}")
+        oled_screen.fill(0)
+        oled_screen.text(str(message["data"]["analysis"]["stress_index"]), 0, 0, 30)
         oled_screen.show()
+    except Exception as e:
+        print("failed delivering message", e)
 
 
 def calculate_ppi(ppi_average):
