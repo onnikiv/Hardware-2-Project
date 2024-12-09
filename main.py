@@ -184,6 +184,7 @@ class Display:
             self.KUBIOS()
     
     
+    
     def HR(self):
         y_prev=oled_height//2
         oled_screen.fill(0)
