@@ -451,6 +451,7 @@ class Display:
                 break
         
     def KUBIOS(self):
+        rot.a.irq(handler=None, trigger=Pin.IRQ_RISING, hard=True)
         c_250_samples=[700]
         beat=False
         bpm=True
@@ -472,6 +473,8 @@ class Display:
         ppi_all=[]
         oled_screen.fill(0)
         while True:
+            if button.fifo.has_data():
+                break
             new_time=utime.ticks_ms()
             if (new_time - last_time) > 4:
                 last_time = new_time
@@ -516,7 +519,7 @@ class Display:
                         ppi_average.append(interval_ms)
                         ppi_average = ppi_average[-moving_ppi_max:]
                     last_sample_time = sample_time
-                    
+                                
             if v < MIN_THRESHOLD and beat == True:
                 beat=False
             
@@ -533,7 +536,8 @@ class Display:
                 oled_screen.text(f"{len(ppi_all)} / 60",0,20,10)
                 oled_screen.show()
                 
-            if len(ppi_all) >=59:
+            if len(ppi_all) >=20:
+                
                 oled_screen.fill(0)
                 # Function to connect to WLAN
                 connect_wlan()
@@ -541,7 +545,6 @@ class Display:
                 mqtt_client.set_callback(message_callback)
                 mqtt_client.subscribe("hr-data") 
                 mqtt_client.subscribe("kubios-response")
-                print(ppi_all)
                 while True:
                     # Sending a message every 5 seconds.
                     topic = "kubios-request"
@@ -556,7 +559,14 @@ class Display:
                     sleep(5)
                     mqtt_client.check_msg()
                     time.sleep(5)
-
+                    rot.a.irq(handler=None, trigger=Pin.IRQ_RISING, hard=True)
+                    if button.fifo.has_data():
+                        print("b")
+                        oled_screen.fill(0)
+                        # Palataan takaisin testilistaan nappia painamalla
+                        break
+                    break
+                break
 SSID = "KME759_Group_2"
 PASSWORD = "Ryhma2Koulu."
 BROKER_IP = "192.168.2.253"             
@@ -586,7 +596,12 @@ def message_callback(topic, msg):
         print(message)
         print(f"Stress index: {message["data"]["analysis"]["stress_index"]}")
         oled_screen.fill(0)
-        oled_screen.text(str(message["data"]["analysis"]["stress_index"]), 0, 0, 30)
+        oled_screen.text(f"Mean HR: {message["data"]["analysis"]["mean_hr_bpm"]:.0f}", 0, 0, 30)
+        oled_screen.text(f"Mean PPI: {message["data"]["analysis"]["mean_rr_ms"]:.0f}", 0, 10, 30)
+        oled_screen.text(f"RMSSD: {message["data"]["analysis"]["rmssd_ms"]:.0f}", 0, 20, 30)
+        oled_screen.text(f"SDNN:  {message["data"]["analysis"]["sdnn_ms"]:.0f}", 0, 30, 30)
+        oled_screen.text(f"SNS: {message["data"]["analysis"]["sns_index"]:.3f}", 0, 40, 30)
+        oled_screen.text(f"PNS: {message["data"]["analysis"]["pns_index"]:.3f}", 0, 50, 30)
         oled_screen.show()
     except Exception as e:
         print("failed delivering message", e)
