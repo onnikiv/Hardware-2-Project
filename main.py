@@ -14,29 +14,7 @@ SSID = "KME759_Group_2"
 PASSWORD = "Ryhma2Koulu."
 BROKER_IP = "192.168.2.253"
 port =21883
-
 micropython.alloc_emergency_exception_buf(200)
-heart_bitmap = bytearray([
-    0b00011100,
-    0b01111111,
-    0b11111111,
-    0b11111100,
-    0b01111111,
-    0b01111110,
-    0b00011000,
-    0b00000000
-])
-
-clear_heart_bitmap = bytearray([
-    0b00011100,
-    0b01100001,
-    0b10000011,
-    0b10000100,
-    0b01000011,
-    0b01100001,
-    0b00011100,
-    0b00000000
-])
 heart_bitmap = bytearray([
     0b00011100,
     0b01111111,
@@ -115,6 +93,7 @@ class Display:
         self.state = self.cursor
 
     def cursor(self):
+        rot.a.irq(handler=rot.handler, trigger=Pin.IRQ_RISING, hard=True)
         # Tarkistetaan rotary encoder vain, jos ei olla alavalikossa
         if not self.in_submenu:
             while rot.fifo.has_data():
@@ -136,6 +115,7 @@ class Display:
 
     def row_check(self):
         # Tarkista nappulan tila
+        rot.a.irq(handler=rot.handler, trigger=Pin.IRQ_RISING, hard=True)
         if button.fifo.has_data():
             value = button.fifo.get()
             if self.in_submenu:
@@ -535,7 +515,7 @@ class Display:
                 oled_screen.text(f"{len(ppi_all)} / 60",0,20,10)
                 oled_screen.show()
                 
-            if len(ppi_all) >=20:
+            if len(ppi_all) >=59:
                 
                 oled_screen.fill(0)
 
@@ -556,15 +536,16 @@ class Display:
                     mqtt_client.publish(topic, msg)
                     sleep(5)
                     mqtt_client.check_msg()
-                    time.sleep(5)
                     if button.fifo.has_data():
                         print("b")
                         oled_screen.fill(0)
                         # Palataan takaisin testilistaan nappia painamalla
                         rot.a.irq(handler=rot.handler, trigger=Pin.IRQ_RISING, hard=True)
+                        time.sleep(1)
                         break
                     break
                 break
+            
 
 
 def connect_wlan():
