@@ -474,6 +474,7 @@ class Display:
         oled_screen.fill(0)
         while True:
             if button.fifo.has_data():
+                rot.a.irq(handler=rot.handler, trigger=Pin.IRQ_RISING, hard=True)
                 break
             new_time=utime.ticks_ms()
             if (new_time - last_time) > 4:
@@ -559,11 +560,12 @@ class Display:
                     sleep(5)
                     mqtt_client.check_msg()
                     time.sleep(5)
-                    rot.a.irq(handler=None, trigger=Pin.IRQ_RISING, hard=True)
+                    rot.a.irq(handler=rot.handler, trigger=Pin.IRQ_RISING, hard=True)
                     if button.fifo.has_data():
                         print("b")
                         oled_screen.fill(0)
                         # Palataan takaisin testilistaan nappia painamalla
+                        rot.a.irq(handler=rot.handler, trigger=Pin.IRQ_RISING, hard=True)
                         break
                     break
                 break
