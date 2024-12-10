@@ -10,11 +10,57 @@ from time import sleep
 from umqtt.simple import MQTTClient
 import ujson
 
+"""#----------------------TÄS YRITETÄÄN YHDISTÄÄ-----------------------------------------------------------
 SSID = "KME759_Group_2"
 PASSWORD = "Ryhma2Koulu."
 BROKER_IP = "192.168.2.253"
 port =21883
+
+def connect_wlan():
+    # Connecting to the group WLAN
+    wlan = network.WLAN(network.STA_IF)
+    wlan.active(True)
+    wlan.connect(SSID, PASSWORD)
+    # Attempt to connect once per second
+    while wlan.isconnected() == False:
+        print("Connecting... ")
+        sleep(1)
+
+    # Print the IP address of the Pico
+    print("Connection successful. Pico IP:", wlan.ifconfig()[0])
+    
+def connect_mqtt():
+    mqtt_client=MQTTClient("", BROKER_IP, port)
+    mqtt_client.connect(clean_session=True)
+    return mqtt_client
+
+# 
+connect_wlan()
+mqtt_client = connect_mqtt()
+#---------------------------------------------------------------------------------------------------------
+"""
 micropython.alloc_emergency_exception_buf(200)
+heart_bitmap = bytearray([
+    0b00011100,
+    0b01111111,
+    0b11111111,
+    0b11111100,
+    0b01111111,
+    0b01111110,
+    0b00011000,
+    0b00000000
+])
+
+clear_heart_bitmap = bytearray([
+    0b00011100,
+    0b01100001,
+    0b10000011,
+    0b10000100,
+    0b01000011,
+    0b01100001,
+    0b00011100,
+    0b00000000
+])
 heart_bitmap = bytearray([
     0b00011100,
     0b01111111,
@@ -142,6 +188,7 @@ class Display:
     
     
     def HR(self):
+        rot.a.irq(handler=None, trigger=Pin.IRQ_RISING, hard=True)
         y_prev=oled_height//2
         oled_screen.fill(0)
         y=0
@@ -252,10 +299,12 @@ class Display:
             oled_screen.show()
         
             if button.fifo.has_data():
-                    break
+                rot.a.irq(handler=rot.handler, trigger=Pin.IRQ_RISING, hard=True)
+                break
         self.update_display()
 
     def HRV(self):
+        rot.a.irq(handler=None, trigger=Pin.IRQ_RISING, hard=True)
         c_250_samples=[700]
         beat=False
         bpm=True
@@ -349,43 +398,23 @@ class Display:
                 oled_screen.text(f"SDNN: {average_sdnn}", 0,20 ,10)
                 oled_screen.text(f"RMSSD: {average_rmssd}", 0, 30, 10)
                 oled_screen.show()
-                topic = "hrv"
-                measurement = { 
-                    "mean_hr": average_bpm, 
-                    "mean_ppi": average_ppi, 
-                    "rmssd": average_rmssd, 
-                    "sdnn": average_sdnn 
-                } 
-            
-   
-                def message_callback(topic, msg):
-                    print(f"Received message on topic {topic.decode()}: {msg.decode()}")
-
                 try:
-                    mqtt_client = connect_mqtt()
-                    mqtt_client.set_callback(message_callback)
-                    mqtt_client.subscribe(topic)
-
-                    print(f"Subscribed to topic: {topic}")
-
-                    time.sleep(5)
-
+                    #mosquitto_sub -h localhost -t "#"
+                    topic = "hrv"
+                    measurement = { 
+                        "mean_hr": average_bpm, 
+                        "mean_ppi": average_ppi, 
+                        "rmssd": average_rmssd, 
+                        "sdnn": average_sdnn 
+                        } 
                     msg = ujson.dumps(measurement)
                     mqtt_client.publish(topic, msg)
-                    print("Message published:", msg)
-                    
-                    while True:
-                        mqtt_client.wait_msg()
-                        break
-
                 except Exception as e:
-                    print(f"Failed to send MQTT message: {e}")
-
-
-                
+                    print("failed delivering message", e)
                 break
 
             if button.fifo.has_data():
+                rot.a.irq(handler=rot.handler, trigger=Pin.IRQ_RISING, hard=True)
                 break
             
 
@@ -498,7 +527,7 @@ class Display:
                         ppi_average.append(interval_ms)
                         ppi_average = ppi_average[-moving_ppi_max:]
                     last_sample_time = sample_time
-                                
+                    
             if v < MIN_THRESHOLD and beat == True:
                 beat=False
             
@@ -514,28 +543,42 @@ class Display:
                 oled_screen.text(f"Collecting data: ",0,0,10)
                 oled_screen.text(f"{len(ppi_all)} / 60",0,20,10)
                 oled_screen.show()
-                
-            if len(ppi_all) >=59:
-                
-                oled_screen.fill(0)
 
-                mqtt_client=connect_mqtt()
-                mqtt_client.set_callback(message_callback)
-                mqtt_client.subscribe("hr-data") 
-                mqtt_client.subscribe("kubios-response")
+            if len(ppi_all)>=59:
+                oled_screen.fill(0)
+                # Function to connect to WLAN
+                try: 
+                    mqtt_client=connect_mqtt()
+                    mqtt_client.set_callback(message_callback)
+                    mqtt_client.subscribe("hr-data") 
+                    mqtt_client.subscribe("kubios-response")
+                except Exception as e:
+                    print("failed connecting kubios", e)
+                
+                print(ppi_all)
                 while True:
                     # Sending a message every 5 seconds.
-                    topic = "kubios-request"
-                    message = {
-                        "id": 123,
-                        "type":"RRI",
-                        "data": ppi_all,
-                        "analysis": {"type": "readiness" }
-                            }
-                    msg = ujson.dumps(message)
-                    mqtt_client.publish(topic, msg)
-                    sleep(5)
-                    mqtt_client.check_msg()
+                    try:
+                        topic = "kubios-request"
+                        message = {
+                            "id": 123,
+                            "type":"RRI",
+                            "data": ppi_all,
+                            "analysis": {"type": "readiness" }
+                                }
+                        msg = ujson.dumps(message)
+                        mqtt_client.publish(topic, msg)
+                        sleep(5)
+                        mqtt_client.check_msg()
+                        time.sleep(5)
+                        mqtt_client.check_msg()
+                    except Exception as e:
+                        print("failed requesting kubios", e)
+                        oled_screen.fill(0)
+                        oled_screen.text(f"Failed connecting to kubios",0,20,10)
+                        oled_screen.text(f"Press to continue",0,40,10)
+                        oled_screen.show()
+
                     if button.fifo.has_data():
                         print("b")
                         oled_screen.fill(0)
@@ -545,9 +588,10 @@ class Display:
                         break
                     break
                 break
-            
-
-
+SSID = "KME759_Group_2"
+PASSWORD = "Ryhma2Koulu."
+BROKER_IP = "192.168.2.253"             
+port =21883
 def connect_wlan():
     # Connecting to the group WLAN
     wlan = network.WLAN(network.STA_IF)
@@ -573,12 +617,7 @@ def message_callback(topic, msg):
         print(message)
         print(f"Stress index: {message["data"]["analysis"]["stress_index"]}")
         oled_screen.fill(0)
-        oled_screen.text(f"Mean HR: {message["data"]["analysis"]["mean_hr_bpm"]:.0f}", 0, 0, 30)
-        oled_screen.text(f"Mean PPI: {message["data"]["analysis"]["mean_rr_ms"]:.0f}", 0, 10, 30)
-        oled_screen.text(f"RMSSD: {message["data"]["analysis"]["rmssd_ms"]:.0f}", 0, 20, 30)
-        oled_screen.text(f"SDNN:  {message["data"]["analysis"]["sdnn_ms"]:.0f}", 0, 30, 30)
-        oled_screen.text(f"SNS: {message["data"]["analysis"]["sns_index"]:.3f}", 0, 40, 30)
-        oled_screen.text(f"PNS: {message["data"]["analysis"]["pns_index"]:.3f}", 0, 50, 30)
+        oled_screen.text(str(message["data"]["analysis"]["stress_index"]), 0, 0, 30)
         oled_screen.show()
     except Exception as e:
         print("failed delivering message", e)
