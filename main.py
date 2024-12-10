@@ -393,17 +393,39 @@ class Display:
                 oled_screen.text(f"SDNN: {average_sdnn}", 0,20 ,10)
                 oled_screen.text(f"RMSSD: {average_rmssd}", 0, 30, 10)
                 oled_screen.show()
-                
-                #mosquitto_sub -h localhost -t "#"
                 topic = "hrv"
                 measurement = { 
                     "mean_hr": average_bpm, 
                     "mean_ppi": average_ppi, 
                     "rmssd": average_rmssd, 
                     "sdnn": average_sdnn 
-                    } 
-                msg = ujson.dumps(measurement)
-                mqtt_client.publish(topic, msg)
+                } 
+            
+   
+                def message_callback(topic, msg):
+                    print(f"Received message on topic {topic.decode()}: {msg.decode()}")
+
+                try:
+                    mqtt_client = connect_mqtt()
+                    mqtt_client.set_callback(message_callback)
+                    mqtt_client.subscribe(topic)
+
+                    print(f"Subscribed to topic: {topic}")
+
+                    time.sleep(5)
+
+                    msg = ujson.dumps(measurement)
+                    mqtt_client.publish(topic, msg)
+                    print("Message published:", msg)
+                    
+                    while True:
+                        mqtt_client.wait_msg()
+                        break
+
+                except Exception as e:
+                    print(f"Failed to send MQTT message: {e}")
+
+
                 
                 break
 
@@ -636,10 +658,24 @@ def calculate_rmssd(ppi_average):
     rounded_rmssd = round((total / len(ppi_average)-1)**(1/2),0)
     return int(rounded_rmssd)
 
+oled_screen.fill(0)
+try:
+    oled_screen.fill(0)
+    oled_screen.text("Connecting...", 0, 0, 1)
+    oled_screen.show()
+    connect_wlan()
+    oled_screen.fill(0)
+    oled_screen.text("[Connected]", 0, 0, 1)
+    oled_screen.show()
+    
+except Exception as e:
+    oled_screen.fill(0)
+    oled_screen.text(f"Failed to connect to WLAN: {e}", 0, 0, 1)
+    oled_screen.show()
+    print(f"Failed to connect to WLAN: {e}")
+
+time.sleep(2)
 display = Display()
-
-
-
 
 while True:
     if not display.in_submenu:
