@@ -10,35 +10,11 @@ from time import sleep
 from umqtt.simple import MQTTClient
 import ujson
 
-"""#----------------------TÄS YRITETÄÄN YHDISTÄÄ-----------------------------------------------------------
 SSID = "KME759_Group_2"
 PASSWORD = "Ryhma2Koulu."
 BROKER_IP = "192.168.2.253"
 port =21883
 
-def connect_wlan():
-    # Connecting to the group WLAN
-    wlan = network.WLAN(network.STA_IF)
-    wlan.active(True)
-    wlan.connect(SSID, PASSWORD)
-    # Attempt to connect once per second
-    while wlan.isconnected() == False:
-        print("Connecting... ")
-        sleep(1)
-
-    # Print the IP address of the Pico
-    print("Connection successful. Pico IP:", wlan.ifconfig()[0])
-    
-def connect_mqtt():
-    mqtt_client=MQTTClient("", BROKER_IP, port)
-    mqtt_client.connect(clean_session=True)
-    return mqtt_client
-
-# 
-connect_wlan()
-mqtt_client = connect_mqtt()
-#---------------------------------------------------------------------------------------------------------
-"""
 micropython.alloc_emergency_exception_buf(200)
 heart_bitmap = bytearray([
     0b00011100,
@@ -562,8 +538,7 @@ class Display:
             if len(ppi_all) >=20:
                 
                 oled_screen.fill(0)
-                # Function to connect to WLAN
-                connect_wlan()
+
                 mqtt_client=connect_mqtt()
                 mqtt_client.set_callback(message_callback)
                 mqtt_client.subscribe("hr-data") 
@@ -582,7 +557,6 @@ class Display:
                     sleep(5)
                     mqtt_client.check_msg()
                     time.sleep(5)
-                    rot.a.irq(handler=rot.handler, trigger=Pin.IRQ_RISING, hard=True)
                     if button.fifo.has_data():
                         print("b")
                         oled_screen.fill(0)
@@ -591,10 +565,8 @@ class Display:
                         break
                     break
                 break
-SSID = "KME759_Group_2"
-PASSWORD = "Ryhma2Koulu."
-BROKER_IP = "192.168.2.253"             
-port =21883
+
+
 def connect_wlan():
     # Connecting to the group WLAN
     wlan = network.WLAN(network.STA_IF)
