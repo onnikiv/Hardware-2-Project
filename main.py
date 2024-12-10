@@ -10,36 +10,13 @@ from time import sleep
 from umqtt.simple import MQTTClient
 import ujson
 
-"""#----------------------TÄS YRITETÄÄN YHDISTÄÄ-----------------------------------------------------------
+micropython.alloc_emergency_exception_buf(200)
+
 SSID = "KME759_Group_2"
 PASSWORD = "Ryhma2Koulu."
-BROKER_IP = "192.168.2.253"
+BROKER_IP = "192.168.2.253"             
 port =21883
 
-def connect_wlan():
-    # Connecting to the group WLAN
-    wlan = network.WLAN(network.STA_IF)
-    wlan.active(True)
-    wlan.connect(SSID, PASSWORD)
-    # Attempt to connect once per second
-    while wlan.isconnected() == False:
-        print("Connecting... ")
-        sleep(1)
-
-    # Print the IP address of the Pico
-    print("Connection successful. Pico IP:", wlan.ifconfig()[0])
-    
-def connect_mqtt():
-    mqtt_client=MQTTClient("", BROKER_IP, port)
-    mqtt_client.connect(clean_session=True)
-    return mqtt_client
-
-# 
-connect_wlan()
-mqtt_client = connect_mqtt()
-#---------------------------------------------------------------------------------------------------------
-"""
-micropython.alloc_emergency_exception_buf(200)
 heart_bitmap = bytearray([
     0b00011100,
     0b01111111,
@@ -50,28 +27,6 @@ heart_bitmap = bytearray([
     0b00011000,
     0b00000000
 ])
-
-clear_heart_bitmap = bytearray([
-    0b00011100,
-    0b01100001,
-    0b10000011,
-    0b10000100,
-    0b01000011,
-    0b01100001,
-    0b00011100,
-    0b00000000
-])
-heart_bitmap = bytearray([
-    0b00011100,
-    0b01111111,
-    0b11111111,
-    0b11111100,
-    0b01111111,
-    0b01111110,
-    0b00011000,
-    0b00000000
-])
-
 clear_heart_bitmap = bytearray([
     0b00011100,
     0b01100001,
@@ -398,19 +353,38 @@ class Display:
                 oled_screen.text(f"SDNN: {average_sdnn}", 0,20 ,10)
                 oled_screen.text(f"RMSSD: {average_rmssd}", 0, 30, 10)
                 oled_screen.show()
+                topic = "hrv"
+                measurement = { 
+                    "mean_hr": average_bpm, 
+                    "mean_ppi": average_ppi, 
+                    "rmssd": average_rmssd, 
+                    "sdnn": average_sdnn 
+                } 
+            
+   
+                def message_callback(topic, msg):
+                    print(f"Received message on topic {topic.decode()}: {msg.decode()}")
+
                 try:
-                    #mosquitto_sub -h localhost -t "#"
-                    topic = "hrv"
-                    measurement = { 
-                        "mean_hr": average_bpm, 
-                        "mean_ppi": average_ppi, 
-                        "rmssd": average_rmssd, 
-                        "sdnn": average_sdnn 
-                        } 
+                    mqtt_client = connect_mqtt()
+                    mqtt_client.set_callback(message_callback)
+                    mqtt_client.subscribe(topic)
+
+                    print(f"Subscribed to topic: {topic}")
+
+                    time.sleep(5)
+
                     msg = ujson.dumps(measurement)
                     mqtt_client.publish(topic, msg)
+                    print("Message published:", msg)
+                    
+                    while True:
+                        mqtt_client.wait_msg()
+                        break
+
                 except Exception as e:
-                    print("failed delivering message", e)
+                    print(f"Failed to send MQTT message: {e}")
+                    
                 break
 
             if button.fifo.has_data():
@@ -588,10 +562,7 @@ class Display:
                         break
                     break
                 break
-SSID = "KME759_Group_2"
-PASSWORD = "Ryhma2Koulu."
-BROKER_IP = "192.168.2.253"             
-port =21883
+
 def connect_wlan():
     # Connecting to the group WLAN
     wlan = network.WLAN(network.STA_IF)
@@ -600,7 +571,7 @@ def connect_wlan():
     # Attempt to connect once per second
     while wlan.isconnected() == False:
         print("Connecting... ")
-        sleep(1)
+        sleep(0.01)
 
     # Print the IP address of the Pico
     print("Connection successful. Pico IP:", wlan.ifconfig()[0])
@@ -650,7 +621,9 @@ def calculate_rmssd(ppi_average):
     rounded_rmssd = round((total / len(ppi_average)-1)**(1/2),0)
     return int(rounded_rmssd)
 
+
 oled_screen.fill(0)
+""" TÄÄ PITÄÄ VIEL TSEKKAA
 try:
     oled_screen.fill(0)
     oled_screen.text("Connecting...", 0, 0, 1)
@@ -665,7 +638,7 @@ except Exception as e:
     oled_screen.text(f"Failed to connect to WLAN: {e}", 0, 0, 1)
     oled_screen.show()
     print(f"Failed to connect to WLAN: {e}")
-
+"""
 time.sleep(2)
 display = Display()
 
