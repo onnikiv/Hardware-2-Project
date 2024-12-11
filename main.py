@@ -358,10 +358,12 @@ class Display:
                     "sdnn": average_sdnn 
                 } 
             
+                save_measurement(measurement)
    
                 def message_callback(topic, msg):
                     print(f"Received message on topic {topic.decode()}: {msg.decode()}")
 
+                # Tähä vois lisää oledii et sending message yms
                 try:
                     mqtt_client = connect_mqtt()
                     mqtt_client.set_callback(message_callback)
@@ -392,41 +394,43 @@ class Display:
 
     def HISTORY(self):
         oled_screen.fill(0)
-        test_measurements = ["Measurement 1", "Measurement 2", "Measurement 3", "Measurement 4", "Measurement 5"]
+        measurements = read_measurements_from_file('history.txt')
         current_test = 0
 
         while True:
-            # Näytetään testi, johon ollaan siirtymässä
             oled_screen.fill(0)
-            for i, test in enumerate(test_measurements):
-                pointer = ">" if i == current_test else ""
-                oled_screen.text(f"{pointer} {test}", 0, i * 10, 1)
+            if not measurements:
+                oled_screen.text("No history available", 0, 0, 1)
+            else:
+                for i, data in enumerate(measurements):
+                    pointer = ">" if i == current_test else ""
+                    timestamp = data["timestamp"]
+                    oled_screen.text(f"{pointer} {timestamp}", 0, i * 10, 1)
             oled_screen.show()
 
-            # Tarkistetaan nappi ja rotaatio vain HISTORY-valikossa
             if rot.fifo.has_data():
                 movement = rot.fifo.get()
-                if movement == -1 and current_test < len(test_measurements) - 1:
+                if movement == -1 and current_test < len(measurements) - 1:
                     current_test += 1
                 elif movement == 1 and current_test > 0:
                     current_test -= 1
 
             if button.fifo.has_data():
-                # Siirrytään valitun testin sisälle nappia painamalla
                 value = button.fifo.get()
-                if value == 2:
+                if value == 2 and measurements:
                     self.show_test_detail(current_test)
                 break
 
     def show_test_detail(self, test_index):
         oled_screen.fill(0)
-        oled_screen.text(f"Test {test_index + 1}", 10, 10, 1)
-        oled_screen.text("Details...", 10, 20, 1)
-        oled_screen.show()
-        while True:
-            if button.fifo.has_data():
-                # Palataan takaisin testilistaan nappia painamalla
-                break
+        measurements = read_measurements_from_file('history.txt')
+        if 0 <= test_index < len(measurements):
+            measurement = measurements[test_index]["measurement"]
+            oled_screen.text(f"mean_hr: {measurement['mean_hr']}", 0, 0, 1)
+            oled_screen.text(f"mean_ppi: {measurement['mean_ppi']}", 0, 10, 1)
+            oled_screen.text(f"rmssd: {measurement['rmssd']}", 0, 20, 1)
+            oled_screen.text(f"sdnn: {measurement['sdnn']}", 0, 30, 1)
+            oled_screen.show()
         
     def KUBIOS(self):
         rot.a.irq(handler=None, trigger=Pin.IRQ_RISING, hard=True)
@@ -627,6 +631,37 @@ def calculate_rmssd(ppi_average):
     rounded_rmssd = round((total / len(ppi_average)-1)**(1/2),0)
     return int(rounded_rmssd)
 
+def save_measurement(measurement, file_path='history.txt'):
+    timestamp = 20247
+    data = {
+        "timestamp": timestamp,
+        "measurement": measurement
+    }
+    try:
+        with open(file_path, 'r') as file:
+            lines = file.readlines()
+        print(lines)
+        lines.append(ujson.dumps(data) + "\n")
+    except OSError:
+        with open(file_path, 'w+') as file:
+            lines = [ujson.dumps(data) + "\n"]
+    
+    with open("history.txt", "w") as file:
+        for line in lines[-5:]:
+            file.write(line)
+
+def read_measurements_from_file(file_path='history.txt'):
+    measurements = []
+    try:
+        with open(file_path, 'r') as file:
+            for line in file:
+                measurements.append(ujson.loads(line.strip()))
+    except OSError:
+        print(f"File not found: {file_path}")
+    except Exception as e:
+        print(f"An error occurred: {e}")
+    return measurements   
+
 
 oled_screen.fill(0)
 
@@ -655,3 +690,4 @@ while True:
 
     while button.fifo.has_data():
         display.row_check()
+
