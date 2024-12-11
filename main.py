@@ -399,25 +399,28 @@ class Display:
             oled_screen.fill(0)
             if not measurements:
                 oled_screen.text("No history available", 0, 0, 1)
+                oled_screen.show()
+                if button.fifo.has_data():
+                    break  # Exit the loop immediately if there is no data
             else:
                 for i, data in enumerate(measurements):
                     pointer = ">" if i == current_test else ""
                     timestamp = data["timestamp"]
                     oled_screen.text(f"{pointer} {timestamp}", 0, i * 10, 1)
-            oled_screen.show()
+                oled_screen.show()
 
-            if rot.fifo.has_data():
-                movement = rot.fifo.get()
-                if movement == -1 and current_test < len(measurements) - 1:
-                    current_test += 1
-                elif movement == 1 and current_test > 0:
-                    current_test -= 1
+                if rot.fifo.has_data():
+                    movement = rot.fifo.get()
+                    if movement == -1 and current_test < len(measurements) - 1:
+                        current_test += 1
+                    elif movement == 1 and current_test > 0:
+                        current_test -= 1
 
-            if button.fifo.has_data():
-                value = button.fifo.get()
-                if value == 2 and measurements:
-                    self.show_test_detail(current_test)
-                break
+                if button.fifo.has_data():
+                    value = button.fifo.get()
+                    if value == 2 and measurements:
+                        self.show_test_detail(current_test)
+                    break
 
     def show_test_detail(self, test_index):
         oled_screen.fill(0)
