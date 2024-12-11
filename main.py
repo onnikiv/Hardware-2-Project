@@ -10,7 +10,9 @@ from time import sleep
 from umqtt.simple import MQTTClient
 import ujson
 
+#Buffer for exceotuions
 micropython.alloc_emergency_exception_buf(200)
+
 
 SSID = "KME759_Group_2"
 PASSWORD = "Ryhma2Koulu."
@@ -46,7 +48,7 @@ old_time = 0
 
 adc = ADC(26)
 
-# Perus Encoder luokka
+# Encoder Class
 class Encoder:
     def __init__(self, rot_a, rot_b):
         self.a = Pin(rot_a, mode=Pin.IN, pull=Pin.PULL_UP)
@@ -81,6 +83,7 @@ class Button:
 
 button = Button(12)
 
+#Display Class
 class Display:
     def __init__(self):
         oled_screen.fill(0)
@@ -143,17 +146,17 @@ class Display:
     
     
     def HR(self):
+        #Disable rotary encoder
         rot.a.irq(handler=None, trigger=Pin.IRQ_RISING, hard=True)
         y_prev=oled_height//2
         oled_screen.fill(0)
         y=0
         x=0
-        x=0
-        c_250_samples=[700]
+        c_250_samples=[700] #adc samples
         beat=False
         bpm=True
-        interval_ms=0
-        beats_detected=0
+        interval_ms=0 #Interval between beats
+        beats_detected=0 #Count of detected beats
         last_bpm=0
         last_sample_time=0
         sample_time=0
@@ -162,85 +165,83 @@ class Display:
         max_BPM=200
         min_BPM=30
         ppi_average_calculated=False
-        v_count=0
-        last_time=0
-        max_c_250_samples = 250
+        v_count=0 #Number of valid samples
+        last_time=0 #Time from the last samples
+        max_c_250_samples = 250 #max samples
         moving_ppi_max=10
-        ppi_average=[]
+        ppi_average=[] 
         ppi_all=[]
         oled_screen.fill(0)
         while True:
+            # Current time
             new_time=utime.ticks_ms()
+            # Read adc values every 4 ms
             if (new_time - last_time) > 4:
                 last_time = new_time
-                v = adc.read_u16()
+                v = adc.read_u16() #read ADC
+                # IF ADC value is between se sample range
                 if v > sample_max or v < sample_min:
-                    print("no values")
+                    print("no values") 
                 else:
-                    c_250_samples.append(v)
-                    v_count+=1
+                    c_250_samples.append(v) #add value to the current samples
+                    v_count+=1 #increment valid samples
             
+            # Remove the last sample from the list 
             c_250_samples = c_250_samples[-max_c_250_samples:]
             
+            # Calculate thresholds for beat detection
             min_value, max_value = min(c_250_samples), max(c_250_samples)
-            
             MAX_THRESHOLD=(min_value+max_value*3)//4
             MIN_THRESHOLD=(min_value+max_value) //2
             
-            if v > MAX_THRESHOLD and beat == False:
+            # Detect heartbeats from the thresholds
+            if v > MAX_THRESHOLD and beat == False: # If adc goes across the max threshold and beat is not detected
                 sample_time = new_time
                 interval_ms = sample_time - last_sample_time
-                if interval_ms > 200:
-                    if ppi_average_calculated:
+                # Calculate time
+                
+                # Check the PPI intervals
+                if interval_ms > 200: # Ignore intervals shorter than 200ms
+                    if ppi_average_calculated: # If data exist calculate average 
                         average = calculate_ppi(ppi_average)
-                        if interval_ms > (average*0.7) and interval_ms <(average*1.30):
+                        if interval_ms > (average*0.7) and interval_ms <(average*1.30): # Taking intervals within the 70%-130% of the average 
                             ppi_all.append(interval_ms)
-                        beat=True
+                        beat=True # Beat detected
                         bpm= calculate_bpm(ppi_average)
-                        if bpm > max_BPM or bpm < min_BPM:
-                            bpm = last_bpm
+                        if bpm > max_BPM or bpm < min_BPM: 
+                            bpm = last_bpm # Update last BPM
                         else:
                             last_bpm = bpm
                         
-                    ppi_average.append(interval_ms)
-                    ppi_average = ppi_average[-moving_ppi_max:]
-                    last_sample_time = sample_time
+                    ppi_average.append(interval_ms) # Add the interval to the moving average
+                    ppi_average = ppi_average[-moving_ppi_max:] # Removing last value to keep the average list at its defined maximum size
+                    last_sample_time = sample_time # Update sample time for the next interval calculation
                 
-                else:
+                else: # Handle shorter than 200ms intervals
                     beats_detected+=1
                     beat=True
-                    if beats_detected > 5:
-                        ppi_average_calculated = True
-                        ppi_average.append(interval_ms)
+                    if beats_detected > 5: # After detecting more than 5 beats
+                        ppi_average_calculated = True # PPI can be calculated
+                        ppi_average.append(interval_ms) 
                         ppi_average = ppi_average[-moving_ppi_max:]
                     last_sample_time = sample_time
+            # Checking if the ADC value drops below the min threshold and beat was detected
             if v < MIN_THRESHOLD and beat == True:
-                beat=False
+                beat=False # Reset the beat for the next calculation
         
             if v_count > 10:
                 print(bpm)
             
-            if len(ppi_all) > 59:
-                average_ppi=calculate_ppi(ppi_all)
-                average_bpm= calculate_bpm(ppi_all)
-            
             colour=1
             scaled=oled_height-1-((v-sample_min)*oled_height//(sample_max-sample_min))
-            scaled=max(0,min(oled_height-1,scaled))
-            oled_screen.line(x, y_prev, x+1, scaled , colour)
-            y_prev = scaled
-            x+=1
+            scaled=max(0,min(oled_height-1,scaled)) # Scale the values to the screen size
+            oled_screen.line(x, y_prev, x+1, scaled , colour) # Draw a line
+            y_prev = scaled # Update previous Y coordinate for the next point
+            x+=1 # Move x-coordinate
             if x >= oled_width:
-                x=0
-            scaled=oled_height-1-((v-sample_min)*oled_height//(sample_max-sample_min))
-            scaled=max(0,min(oled_height-1,scaled))
-            oled_screen.line(x, y_prev, x+1, scaled , colour)
-            y_prev = scaled
-            x+=1
-            if x >= oled_width:
-                x=0
+                x=0 # Resetting the x value
                 oled_screen.fill(0)
-            oled_screen.fill_rect(0,0,oled_width,15,0)
+            oled_screen.fill_rect(0,0,oled_width,15,0) # Clearing the top part for the BPM
             if min_BPM < bpm < max_BPM:
                 oled_screen.text(f"BPM: {bpm}", 10, 2, 1)
             else:
