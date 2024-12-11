@@ -518,7 +518,7 @@ class Display:
                 oled_screen.text(f"{len(ppi_all)} / 60",0,20,10)
                 oled_screen.show()
 
-            if len(ppi_all)>=20:
+            if len(ppi_all)>=59:
                 oled_screen.fill(0)
                 # Function to connect to WLAN
                 try: 
@@ -552,27 +552,11 @@ class Display:
                         oled_screen.text(f"Failed connecting to kubios",0,20,10)
                         oled_screen.text(f"Press to continue",0,40,10)
                         oled_screen.show()
-
                     if button.fifo.has_data():
                         rot.a.irq(handler=rot.handler, trigger=Pin.IRQ_RISING, hard=True)
                         time.sleep(1)
                         break
                     break
-                oled_screen.fill(0)
-                print(int(msg["data"]["analysis"]["stress_index"]))
-                stress = int(msg["data"]["analysis"]["stress_index"])
-                oled_screen.text(f"Stress index: {int(stress):.0f}", 0, 0, 30)
-                oled_screen.show()
-                if stress < 10:
-                    oled_screen.text(f":) Low Stress", oled_width//2, 30, 30)
-                    oled_screen.show()
-                elif 20 <= stress <=10:
-                    oled_screen.text(f":/ Moderate Stress", oled_width//2, 30, 30)
-                    oled_screen.show()
-                else:
-                    oled_screen.text(f":/ High Stress", oled_width//2, 30, 30)
-                    oled_screen.show()
-                time.sleep(10)
                 break
 
 def connect_wlan():
@@ -605,6 +589,20 @@ def message_callback(topic, msg):
         oled_screen.text(f"SNS: {message["data"]["analysis"]["sns_index"]:.3f}", 0, 40, 30)
         oled_screen.text(f"PNS: {message["data"]["analysis"]["pns_index"]:.3f}", 0, 50, 30)
         oled_screen.show()
+        time.sleep(3)
+        oled_screen.fill(0)
+        stress = message["data"]["analysis"]["stress_index"]
+        oled_screen.text(f"Stress index: {stress:.0f}", 0, 0, 30)
+        oled_screen.show()
+        if stress < 10:
+            oled_screen.text(f":) Low Stress", 0, 30, 30)
+            oled_screen.show()
+        elif 20 <= stress <=10:
+            oled_screen.text(f":/ Moderate Stress", 0, 30, 30)
+            oled_screen.show()
+        else:
+            oled_screen.text(f":/ High Stress", 0, 30, 30)
+            oled_screen.show()
     except Exception as e:
         print("failed delivering message", e)
 
