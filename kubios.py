@@ -7,7 +7,7 @@ import ujson
 SSID = "KME759_Group_2"
 PASSWORD = "Ryhma2Koulu."
 BROKER_IP = "192.168.2.253"
-port =21883
+port =1883
 # Function to connect to WLAN
 def connect_wlan():
     # Connecting to the group WLAN
