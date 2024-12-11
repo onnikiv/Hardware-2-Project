@@ -333,10 +333,6 @@ class Display:
             if v_count > 10:
                 print(bpm)
                 
-            if len(ppi_all) > 59:
-                average_ppi=calculate_ppi(ppi_all)
-                average_bpm= calculate_bpm(ppi_all)     
-                     
             if len(ppi_all)< 59:
                 oled_screen.fill(0)
                 oled_screen.text(f"Collecting data: ",0,0,10)
@@ -507,11 +503,7 @@ class Display:
                 beat=False
             
             if v_count > 10:
-                print(bpm)
-                
-            if len(ppi_all) > 59:
-                average_ppi=calculate_ppi(ppi_all)
-                average_bpm= calculate_bpm(ppi_all)     
+                print(bpm) 
                      
             if len(ppi_all)< 59:
                 oled_screen.fill(0)
