@@ -334,7 +334,7 @@ class Display:
                 
             if len(ppi_all)< 59:
                 oled_screen.fill(0)
-                oled_screen.text(f"Collecting data: ",0,0,10)
+                oled_screen.text(f"Collecting: ",0,0,10)
                 oled_screen.text(f"{len(ppi_all)} / 60",0,20,10)
                 oled_screen.show()
                 
@@ -513,12 +513,11 @@ class Display:
                      
             if len(ppi_all)< 59:
                 oled_screen.fill(0)
-                oled_screen.text(f"Collecting data: ",0,0,10)
+                oled_screen.text(f"Collecting: ",0,0,10)
                 oled_screen.text(f"{len(ppi_all)} / 60",0,20,10)
                 oled_screen.show()
 
             if len(ppi_all)>= 59:
-                oled_screen.fill(0)
                 # Function to connect to WLAN
                 try: 
                     mqtt_client=connect_mqtt("kubios")
@@ -531,6 +530,10 @@ class Display:
                 print(ppi_all)
                     # Sending a message every 5 seconds.
                 try:
+                    oled_screen.fill(0)
+                    oled_screen.text("Waiting data",0,20,10)
+                    oled_screen.text("from Kubios",0,30,10)
+                    oled_screen.show()
                     topic = "kubios-request"
                     message = {
                         "id": 123,
