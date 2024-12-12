@@ -519,7 +519,7 @@ class Display:
                 oled_screen.text(f"{len(ppi_all)} / 60",0,20,10)
                 oled_screen.show()
 
-            if len(ppi_all)>= 20:
+            if len(ppi_all)>= 59:
                 # Function to connect to WLAN
                 try: 
                     mqtt_client=connect_mqtt("kubios")
