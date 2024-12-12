@@ -427,10 +427,12 @@ class Display:
         measurements = read_measurements_from_file('history.txt')
         if 0 <= test_index < len(measurements):
             measurement = measurements[test_index]["measurement"]
-            oled_screen.text(f"mean_hr: {measurement['mean_hr']}", 0, 0, 1)
-            oled_screen.text(f"mean_ppi: {measurement['mean_ppi']}", 0, 10, 1)
-            oled_screen.text(f"rmssd: {measurement['rmssd']}", 0, 20, 1)
-            oled_screen.text(f"sdnn: {measurement['sdnn']}", 0, 30, 1)
+            oled_screen.text(f"mean_hr: {measurement.get('mean_hr', 'N/A')}", 0, 0, 1)
+            oled_screen.text(f"mean_ppi: {measurement.get('mean_ppi', 'N/A')}", 0, 10, 1)
+            oled_screen.text(f"rmssd: {measurement.get('rmssd', 'N/A')}", 0, 20, 1)
+            oled_screen.text(f"sdnn: {measurement.get('sdnn', 'N/A')}", 0, 30, 1)
+            oled_screen.text(f"sns: {measurement.get('sns', 'N/A')}", 0, 40, 1)
+            oled_screen.text(f"pns: {measurement.get('pns', 'N/A')}", 0, 50, 1)
             oled_screen.show()
         
     def KUBIOS(self):
@@ -528,32 +530,30 @@ class Display:
                     print("failed connecting kubios", e)
                 
                 print(ppi_all)
-                while True:
                     # Sending a message every 5 seconds.
-                    try:
-                        topic = "kubios-request"
-                        message = {
-                            "id": 123,
-                            "type":"RRI",
-                            "data": ppi_all,
-                            "analysis": {"type": "readiness" }
-                                }
-                        msg = ujson.dumps(message)
-                        mqtt_client.publish(topic, msg)
-                        sleep(5)
-                        mqtt_client.check_msg()
-                        time.sleep(2)
-                        mqtt_client.check_msg()
-                    except Exception as e:
-                        print("failed requesting kubios", e)
-                        oled_screen.fill(0)
-                        oled_screen.text(f"Failed connecting to kubios",0,20,10)
-                        oled_screen.text(f"Press to continue",0,40,10)
-                        oled_screen.show()
-                    if button.fifo.has_data():
-                        rot.a.irq(handler=rot.handler, trigger=Pin.IRQ_RISING, hard=True)
-                        time.sleep(1)
-                        break
+                try:
+                    topic = "kubios-request"
+                    message = {
+                        "id": 123,
+                        "type":"RRI",
+                        "data": ppi_all,
+                        "analysis": {"type": "readiness" }
+                            }
+                    msg = ujson.dumps(message)
+                    mqtt_client.publish(topic, msg)
+                    sleep(5)
+                    mqtt_client.check_msg()
+                    time.sleep(2)
+                    mqtt_client.check_msg()
+                except Exception as e:
+                    print("failed requesting kubios", e)
+                    oled_screen.fill(0)
+                    oled_screen.text(f"Failed connecting to kubios",0,20,10)
+                    oled_screen.text(f"Press to continue",0,40,10)
+                    oled_screen.show()
+                if button.fifo.has_data():
+                    rot.a.irq(handler=rot.handler, trigger=Pin.IRQ_RISING, hard=True)
+                    time.sleep(1)
                     break
                 break
 
@@ -580,27 +580,48 @@ def message_callback(topic, msg):
     try:
         message = ujson.loads(msg)
         oled_screen.fill(0)
-        oled_screen.text(f"Mean HR: {message["data"]["analysis"]["mean_hr_bpm"]:.0f}", 0, 0, 30)
-        oled_screen.text(f"Mean PPI: {message["data"]["analysis"]["mean_rr_ms"]:.0f}", 0, 10, 30)
-        oled_screen.text(f"RMSSD: {message["data"]["analysis"]["rmssd_ms"]:.0f}", 0, 20, 30)
-        oled_screen.text(f"SDNN:  {message["data"]["analysis"]["sdnn_ms"]:.0f}", 0, 30, 30)
-        oled_screen.text(f"SNS: {message["data"]["analysis"]["sns_index"]:.3f}", 0, 40, 30)
-        oled_screen.text(f"PNS: {message["data"]["analysis"]["pns_index"]:.3f}", 0, 50, 30)
+        mean_hr = message['data']['analysis']['mean_hr_bpm']
+        mean_ppi = message['data']['analysis']['mean_rr_ms']
+        rmssd = message['data']['analysis']['rmssd_ms']
+        sdnn = message['data']['analysis']['sdnn_ms']
+        sns = message['data']['analysis']['sns_index']
+        pns = message['data']['analysis']['pns_index']
+        
+        oled_screen.text(f"Mean HR: {mean_hr:.0f}", 0, 0, 30)
+        oled_screen.text(f"Mean PPI: {mean_ppi:.0f}", 0, 10, 30)
+        oled_screen.text(f"RMSSD: {rmssd:.0f}", 0, 20, 30)
+        oled_screen.text(f"SDNN:  {sdnn:.0f}", 0, 30, 30)
+        oled_screen.text(f"SNS: {sns:.3f}", 0, 40, 30)
+        oled_screen.text(f"PNS: {pns:.3f}", 0, 50, 30)
         oled_screen.show()
         time.sleep(3)
         oled_screen.fill(0)
-        stress = message["data"]["analysis"]["stress_index"]
+        stress = message['data']['analysis']['stress_index']
         oled_screen.text(f"Stress index: {stress:.0f}", 0, 0, 30)
         oled_screen.show()
         if stress < 10:
             oled_screen.text(f":) Low Stress", 0, 30, 30)
             oled_screen.show()
-        elif 20 <= stress <=10:
+        elif 20 <= stress <= 10:
             oled_screen.text(f":/ Moderate Stress", 0, 30, 30)
             oled_screen.show()
         else:
             oled_screen.text(f":/ High Stress", 0, 30, 30)
             oled_screen.show()
+        
+        # Create the measurement dictionary
+        measurement = {
+            'mean_hr': mean_hr,
+            'mean_ppi': mean_ppi,
+            'rmssd': rmssd,
+            'sdnn': sdnn,
+            'sns': sns,
+            'pns': pns
+        }
+        
+        # Save the measurement to history
+        save_measurement(measurement)
+        
     except Exception as e:
         print("failed delivering message", e)
 
