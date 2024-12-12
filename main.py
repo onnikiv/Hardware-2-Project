@@ -661,7 +661,7 @@ def calculate_rmssd(ppi_average):
     return int(rounded_rmssd)
 
 def save_measurement(measurement, file_path='history.txt',):
-    timestamp = f"HRV:measurement"
+    timestamp = f"Measurement"
     data = {
         "timestamp": timestamp,
         "measurement": measurement
