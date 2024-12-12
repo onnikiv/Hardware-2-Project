@@ -428,12 +428,12 @@ class Display:
         if 0 <= test_index < len(measurements):
             measurement = measurements[test_index]["measurement"]
             oled_screen.text(f"Time: {measurement.get('formatted_time', 'N/A')}", 0, 0, 1)
-            oled_screen.text(f"mean_hr: {measurement.get('mean_hr', 'N/A'):.0f}", 0, 10, 1)
-            oled_screen.text(f"mean_ppi: {measurement.get('mean_ppi', 'N/A'):.0f}", 0, 20, 1)
-            oled_screen.text(f"rmssd: {measurement.get('rmssd', 'N/A'):.0f}", 0, 30, 1)
-            oled_screen.text(f"sdnn: {measurement.get('sdnn', 'N/A'):.0f}", 0, 40, 1)
-            oled_screen.text(f"sns: {measurement.get('sns', 'N/A'):.3f}", 0, 50, 1)
-            oled_screen.text(f"pns: {measurement.get('pns', 'N/A'):.3f}", 0, 60, 1)
+            oled_screen.text(f"mean_hr: {measurement.get('mean_hr', 'N/A')}", 0, 10, 1)
+            oled_screen.text(f"mean_ppi: {measurement.get('mean_ppi', 'N/A')}", 0, 20, 1)
+            oled_screen.text(f"rmssd: {measurement.get('rmssd', 'N/A')}", 0, 30, 1)
+            oled_screen.text(f"sdnn: {measurement.get('sdnn', 'N/A')}", 0, 40, 1)
+            oled_screen.text(f"sns: {measurement.get('sns', 'N/A')}", 0, 50, 1)
+            oled_screen.text(f"pns: {measurement.get('pns', 'N/A')}", 0, 60, 1)
             oled_screen.show()
         
     def KUBIOS(self):
