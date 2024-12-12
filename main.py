@@ -17,7 +17,6 @@ micropython.alloc_emergency_exception_buf(200)
 SSID = "KME759_Group_2"
 PASSWORD = "Ryhma2Koulu."
 BROKER_IP = "192.168.2.253"             
-port =1883
 
 heart_bitmap = bytearray([
     0b00011100,
@@ -363,7 +362,7 @@ class Display:
                     print(f"Received message on topic {topic.decode()}: {msg.decode()}")
 
                 try:
-                    mqtt_client = connect_mqtt()
+                    mqtt_client = connect_mqtt("hrv")
                     mqtt_client.set_callback(message_callback)
                     mqtt_client.subscribe(topic)
 
@@ -522,7 +521,7 @@ class Display:
                 oled_screen.fill(0)
                 # Function to connect to WLAN
                 try: 
-                    mqtt_client=connect_mqtt()
+                    mqtt_client=connect_mqtt("kubios")
                     mqtt_client.set_callback(message_callback)
                     mqtt_client.subscribe("hr-data") 
                     mqtt_client.subscribe("kubios-response")
@@ -571,7 +570,11 @@ def connect_wlan():
     print("Connection successful. Pico IP:", wlan.ifconfig()[0])
 
     
-def connect_mqtt():
+def connect_mqtt(function):
+    if function == "hrv":
+        port = 1883
+    elif function == "kubios":
+        port = 21883
     mqtt_client=MQTTClient("", BROKER_IP, port)
     mqtt_client.connect(clean_session=True)
     return mqtt_client
