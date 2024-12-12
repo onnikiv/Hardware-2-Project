@@ -427,12 +427,13 @@ class Display:
         measurements = read_measurements_from_file('history.txt')
         if 0 <= test_index < len(measurements):
             measurement = measurements[test_index]["measurement"]
-            oled_screen.text(f"mean_hr: {measurement.get('mean_hr', 'N/A'):.0f}", 0, 0, 1)
-            oled_screen.text(f"mean_ppi: {measurement.get('mean_ppi', 'N/A'):.0f}", 0, 10, 1)
-            oled_screen.text(f"rmssd: {measurement.get('rmssd', 'N/A'):.0f}", 0, 20, 1)
-            oled_screen.text(f"sdnn: {measurement.get('sdnn', 'N/A'):.0f}", 0, 30, 1)
-            oled_screen.text(f"sns: {measurement.get('sns', 'N/A'):.3f}", 0, 40, 1)
-            oled_screen.text(f"pns: {measurement.get('pns', 'N/A'):.3f}", 0, 50, 1)
+            oled_screen.text(f"Time: {measurement.get('formatted_time', 'N/A')}", 0, 0, 1)
+            oled_screen.text(f"mean_hr: {measurement.get('mean_hr', 'N/A'):.0f}", 0, 10, 1)
+            oled_screen.text(f"mean_ppi: {measurement.get('mean_ppi', 'N/A'):.0f}", 0, 20, 1)
+            oled_screen.text(f"rmssd: {measurement.get('rmssd', 'N/A'):.0f}", 0, 30, 1)
+            oled_screen.text(f"sdnn: {measurement.get('sdnn', 'N/A'):.0f}", 0, 40, 1)
+            oled_screen.text(f"sns: {measurement.get('sns', 'N/A'):.3f}", 0, 50, 1)
+            oled_screen.text(f"pns: {measurement.get('pns', 'N/A'):.3f}", 0, 60, 1)
             oled_screen.show()
         
     def KUBIOS(self):
@@ -518,7 +519,7 @@ class Display:
                 oled_screen.text(f"{len(ppi_all)} / 60",0,20,10)
                 oled_screen.show()
 
-            if len(ppi_all)>= 59:
+            if len(ppi_all)>= 20:
                 # Function to connect to WLAN
                 try: 
                     mqtt_client=connect_mqtt("kubios")
@@ -587,6 +588,14 @@ def message_callback(topic, msg):
     try:
         message = ujson.loads(msg)
         oled_screen.fill(0)
+        time_satmp = message['data']['analysis']['create_timestamp']
+        date_part, time_part = time_satmp.split("T")
+        time_part = time_part.split(".")[0]  # Remove microseconds
+        time_part = time_part.split(":")  # Split into hours, minutes, seconds
+
+        # Combine into the desired format
+        formatted_time = f"{date_part} {time_part[0]}:{time_part[1]}"
+        print(formatted_time)  # Output: 2024-12-12 09:17
         mean_hr = message['data']['analysis']['mean_hr_bpm']
         mean_ppi = message['data']['analysis']['mean_rr_ms']
         rmssd = message['data']['analysis']['rmssd_ms']
@@ -618,6 +627,7 @@ def message_callback(topic, msg):
         
         # Create the measurement dictionary
         measurement = {
+            'formatted_time':formatted_time,
             'mean_hr': mean_hr,
             'mean_ppi': mean_ppi,
             'rmssd': rmssd,
