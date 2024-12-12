@@ -45,6 +45,7 @@ i2c = I2C(1, scl=Pin(15), sda=Pin(14), freq=400000)
 oled_screen = SSD1306_I2C(oled_width, oled_height, i2c)
 old_time = 0
 
+
 adc = ADC(26)
 
 # Encoder Class
@@ -368,7 +369,7 @@ class Display:
 
                     print(f"Subscribed to topic: {topic}")
 
-                    time.sleep(5)
+                    time.sleep(2)
 
                     msg = ujson.dumps(measurement)
                     mqtt_client.publish(topic, msg)
@@ -656,8 +657,8 @@ def calculate_rmssd(ppi_average):
     rounded_rmssd = round((total / len(ppi_average)-1)**(1/2),0)
     return int(rounded_rmssd)
 
-def save_measurement(measurement, file_path='history.txt'):
-    timestamp = 20247
+def save_measurement(measurement, file_path='history.txt',):
+    timestamp = f"HRV:measurement"
     data = {
         "timestamp": timestamp,
         "measurement": measurement
@@ -674,6 +675,8 @@ def save_measurement(measurement, file_path='history.txt'):
     with open("history.txt", "w") as file:
         for line in lines[-5:]:
             file.write(line)
+    
+    
 
 def read_measurements_from_file(file_path='history.txt'):
     measurements = []
